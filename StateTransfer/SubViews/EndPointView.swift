@@ -8,21 +8,6 @@
 import SwiftUI
 
 
-enum HTTPMethod: String, CaseIterable {
-    case get
-    case post
-    case put
-    case head
-    case delete
-    case patch
-    case options
-    case connect
-    case trace
-    
-    var description: String { rawValue.uppercased() }
-}
-
-
 struct EndPointView: View {
     @Binding var endpoint: URL?
     @Binding var method: HTTPMethod

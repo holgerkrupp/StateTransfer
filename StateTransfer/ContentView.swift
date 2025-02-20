@@ -9,18 +9,38 @@ import SwiftUI
 
 struct ContentView: View {
     
-    @State var request: HTTPRequest
-    
+    @Binding var document: HTTPRequestDocument
     var body: some View {
         HSplitView {
             VStack{
-                EndPointView(endpoint: $request.url, method: $request.method)
-                RequestHeaderView(header: $request.header)
+                EndPointView(endpoint: $document.request.url, method: $document.request.method)
+                Toggle("Follow Redirects", isOn: $document.request.follorRedirects)
+                Divider()
+                RequestHeaderView(header: $document.request.header)
+                Divider()
+                RequestParamterView(header: $document.request.parameters, parameterEncoding: $document.request.parameterEncoding)
+                Divider()
+                RequestBodyView(message: $document.request.body)
             }
+            .padding()
+            .frame(maxWidth: 500)
+            VStack{
+                RequestView(request: $document.request)
+                Spacer()
+                ResponseView()
+                 
+            }
+            .frame(minWidth: 200)
+            .padding()
         }
+        StatusBarView(request: $document.request)
+            .padding([.leading, .bottom])
+            
+        
     }
+
 }
 
 #Preview {
-    ContentView(request: HTTPRequest())
+    ContentView( document: .constant(HTTPRequestDocument()))
 }

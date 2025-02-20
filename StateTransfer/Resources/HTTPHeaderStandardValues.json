@@ -1,0 +1,222 @@
+{
+    "Accept": [
+        "text/html",
+        "application/json",
+        "image/png",
+        "application/xml",
+        "text/plain",
+        "application/pdf",
+        "*/*"
+    ],
+    "Accept-Encoding": [
+        "gzip",
+        "deflate",
+        "br",
+        "compress",
+        "identity"
+    ],
+    "Accept-Language": [
+        "en-US",
+        "en-GB",
+        "fr-FR",
+        "de-DE",
+        "es-ES",
+        "zh-CN",
+        "ja-JP"
+    ],
+    "Access-Control-Allow-Headers": [
+        "Authorization",
+        "Content-Type",
+        "X-Requested-With",
+        "Origin",
+        "Accept",
+        "User-Agent"
+    ],
+    "Access-Control-Allow-Methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS",
+        "PATCH"
+    ],
+    "Access-Control-Allow-Origin": [
+        "*",
+        "https://example.com"
+    ],
+    "Authorization": [
+        "Bearer <token>",
+        "Basic <base64-credentials>",
+        "Digest <hash>"
+    ],
+    "Cache-Control": [
+        "no-cache",
+        "no-store",
+        "max-age=3600",
+        "must-revalidate",
+        "private",
+        "public"
+    ],
+    "Connection": [
+        "keep-alive",
+        "close",
+        "Upgrade"
+    ],
+    "Content-Disposition": [
+        "inline",
+        "attachment; filename=\"example.pdf\"",
+        "form-data; name=\"file\"; filename=\"upload.png\""
+    ],
+    "Content-Encoding": [
+        "gzip",
+        "deflate",
+        "br"
+    ],
+    "Content-Length": [
+        "0",
+        "1024",
+        "4096"
+    ],
+    "Content-Type": [
+        "application/json",
+        "text/html",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded",
+        "image/png",
+        "video/mp4"
+    ],
+    "Cookie": [
+        "SESSIONID=abc123; Path=/; Secure; HttpOnly",
+        "csrftoken=xyz456; Path=/"
+    ],
+    "Date": [
+        "Tue, 20 Feb 2024 12:34:56 GMT"
+    ],
+    "Expect": [
+        "100-continue"
+    ],
+    "Forwarded": [
+        "for=192.0.2.43; proto=https"
+    ],
+    "From": [
+        "user@example.com"
+    ],
+    "Host": [
+        "example.com",
+        "api.example.com"
+    ],
+    "If-Modified-Since": [
+        "Tue, 20 Feb 2024 12:00:00 GMT"
+    ],
+    "If-None-Match": [
+        "\"etag12345\""
+    ],
+    "If-Range": [
+        "\"etag12345\"",
+        "Tue, 20 Feb 2024 12:00:00 GMT"
+    ],
+    "Location": [
+        "https://example.com/redirect"
+    ],
+    "Max-Age": [
+        "3600",
+        "86400"
+    ],
+    "Origin": [
+        "https://example.com",
+        "http://localhost:3000"
+    ],
+    "Pragma": [
+        "no-cache"
+    ],
+    "Range": [
+        "bytes=0-1024",
+        "bytes=500-999"
+    ],
+    "Referer": [
+        "https://example.com",
+        "https://google.com"
+    ],
+    "Referrer-Policy": [
+        "no-referrer",
+        "no-referrer-when-downgrade",
+        "origin",
+        "strict-origin",
+        "same-origin"
+    ],
+    "Retry-After": [
+        "120",
+        "Wed, 21 Feb 2024 12:00:00 GMT"
+    ],
+    "Server": [
+        "Apache",
+        "nginx",
+        "Caddy",
+        "Microsoft-IIS/10.0"
+    ],
+    "Set-Cookie": [
+        "SESSIONID=abc123; Path=/; Secure; HttpOnly",
+        "remember_me=yes; Expires=Wed, 21 Feb 2024 12:00:00 GMT"
+    ],
+    "Strict-Transport-Security": [
+        "max-age=31536000; includeSubDomains; preload"
+    ],
+    "TE": [
+        "trailers",
+        "compress",
+        "gzip",
+        "deflate"
+    ],
+    "Timing-Allow-Origin": [
+        "*",
+        "https://example.com"
+    ],
+    "Transfer-Encoding": [
+        "chunked",
+        "compress",
+        "gzip",
+        "deflate"
+    ],
+    "Upgrade": [
+        "websocket",
+        "h2c"
+    ],
+    "User-Agent": [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "curl/7.68.0",
+        "PostmanRuntime/7.29.0"
+    ],
+    "Vary": [
+        "Accept-Encoding",
+        "User-Agent",
+        "Origin"
+    ],
+    "Via": [
+        "1.1 example.com (Apache/2.4)"
+    ],
+    "WWW-Authenticate": [
+        "Basic realm=\"User Login\"",
+        "Bearer realm=\"Access to API\""
+    ],
+    "X-Content-Duration": [
+        "12.345"
+    ],
+    "X-Content-Type-Options": [
+        "nosniff"
+    ],
+    "X-Frame-Options": [
+        "DENY",
+        "SAMEORIGIN"
+    ],
+    "X-Powered-By": [
+        "PHP/7.4.3",
+        "Express"
+    ],
+    "X-Request-ID": [
+        "123e4567-e89b-12d3-a456-426614174000"
+    ],
+    "X-XSS-Protection": [
+        "1; mode=block",
+        "0"
+    ]
+}

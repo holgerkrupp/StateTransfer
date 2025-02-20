@@ -7,79 +7,118 @@
 
 import Foundation
 
-class HTTPRequest {
-    var url: URL? = URL(string: "http://localhost:3000/")!
+struct HTTPRequest: Codable {
+    var url: URL? = URL(string: "http://localhost:3000/")
     var method: HTTPMethod = .get
     var header: [HeaderEntry] = []
-    var parameters: [parameterEntry] = []
-    var body: Data?
-    
+    var parameters: [HeaderEntry] = []
+    var parameterEncoding: ParameterEncoding = .form
+    var body: String = ""
     var follorRedirects: Bool = true
+    
+    
+    
+    
+    var request : URLRequest? {
+        guard let url else { return nil }
+        var request = URLRequest(url: url)
+        
+        switch method {
+        
+        case .get:
+            var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+            urlComponents.queryItems = parameters.map { URLQueryItem(name: $0.field, value: $0.value) }
+
+            request = URLRequest(url: urlComponents.url!)
+        case .post:
+            break
+            /*
+             
+             Need to check the Body and might need to merge the parameters and the body in one JSON
+             
+             
+             */
+        default:
+            break
+        }
+        
+        
+       
+        request.httpMethod = method.rawValue
+        if body.count > 0 {
+            request.httpBody = body.data(using: .utf8)
+        }
+        
+        for entry in header {
+            request.addValue(entry.value, forHTTPHeaderField: entry.field)
+        }
+        return request
+    }
+    
+    func run() async{
+       
+        guard let request else { return  }
+
+        let session = createSession(followRedirect: follorRedirects)
+        let startTime = DispatchTime.now()
+
+        do{
+            let (data, response) = try await session.data(for: request)
+            let endTime = DispatchTime.now()
+            let elapsedTime = Double(endTime.uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
+            DispatchQueue.main.async{
+                NotificationCenter.default.post(name: NSNotification.Name("HTTPResponse"), object: (data, response, elapsedTime), userInfo: (response as? HTTPURLResponse)?.allHeaderFields)
+           
+            }
+            
+        }catch{
+            print(error)
+        }
+    }
+   private func createSession(followRedirect: Bool) -> URLSession {
+        if followRedirect {
+            return URLSession(configuration: .default) // Default behavior follows redirects
+        } else {
+            return URLSession(configuration: .default, delegate: RedirectHandler(), delegateQueue: nil)
+        }
+    }
 }
 
+enum ParameterEncoding: String, CaseIterable, Codable {
+    
+    case form = "Form encoded"
+    case json = "JSON encoded"
+    
+}
+enum HTTPMethod: String, CaseIterable, Codable {
+    case get
+    case post
+    case put
+    case head
+    case delete
+    case patch
+    case options
+    case connect
+    case trace
+    
+    var description: String { rawValue.uppercased() }
+}
 
-struct HeaderEntry: Equatable, Identifiable {
+struct HeaderEntry: Equatable, Identifiable, Codable {
     var id: UUID = UUID()
     var active: Bool
     var field: String
     var value: String
-}
-
-struct parameterEntry {
-    var active: Bool
-    var field: String
-    var value: Any
+    
 }
 
 
-enum hederFields: String {
-    case Accept
-    case AcceptEncoding = "Accept-Encoding"
-    case AcceptLanguage = "Accept-Language"
-    case AccessControlAllowHeaders = "Access-Control-Allow-Headers"
-    case AccessControlAllowMethods = "Access-Control-Allow-Methods"
-    case AccessControlAllowOrigin = "Access-Control-Allow-Origin"
-    case AccessControlRequestHeaders = "Access-Control-Request-Headers"
-    case AccessControlRequestMethod = "Access-Control-Request-Method"
-    case Authorization
-    case CacheControl = "Cache-Control"
-    case Connection
-    case ContentDisposition = "Content-Disposition"
-    case ContentEncoding = "Content-Encoding"
-    case ContentLength = "Content-Length"
-    case ContentType = "Content-Type"
-    case Cookie
-    case Date
-    case Expect
-    case Forwarded
-    case From
-    case Host
-    case IfModifiedSince = "If-Modified-Since"
-    case IfNoneMatch = "If-None-Match"
-    case IfRange = "If-Range"
-    case Location
-    case MaxAge = "Max-Age"
-    case Origin
-    case Pragma
-    case Range
-    case Referer
-    case ReferrerPolicy = "Referrer-Policy"
-    case RetryAfter = "Retry-After"
-    case Server
-    case SetCookie = "Set-Cookie"
-    case StrictTransportSecurity = "Strict-Transport-Security"
-    case TE
-    case TimingAllowOrigin = "Timing-Allow-Origin"
-    case TransferEncoding = "Transfer-Encoding"
-    case Upgrade
-    case UserAgent = "User-Agent"
-    case Vary
-    case Via
-    case WWWAuthenticate = "WWW-Authenticate"
-    case XContentDuration = "X-Content-Duration"
-    case XContentTypeOptions = "X-Content-Type-Options"
-    case XFrameOptions = "X-Frame-Options"
-    case XPoweredBy = "X-Powered-By"
-    case XRequestID = "X-Request-ID"
-    case XXSSProtection = "X-XSS-Protection"
+class RedirectHandler: NSObject, URLSessionTaskDelegate {
+    func urlSession(_ session: URLSession,
+                    task: URLSessionTask,
+                    willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest,
+                    completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil) // Blocks redirection
+    }
 }

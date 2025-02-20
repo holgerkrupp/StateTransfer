@@ -10,8 +10,8 @@ import SwiftUI
 @main
 struct StateTransferApp: App {
     var body: some Scene {
-        WindowGroup {
-            ContentView(request: HTTPRequest())
+        DocumentGroup(newDocument: HTTPRequestDocument()) { file in
+            ContentView(document: file.$document)
         }
     }
 }

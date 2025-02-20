@@ -10,9 +10,22 @@
 		486DF8FE2D666E570013F490 /* StateTransfer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StateTransfer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		486DF9472D6741DA0013F490 /* Exceptions for "StateTransfer" folder in "Compile Sources" phase from "StateTransfer" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = 486DF8FA2D666E570013F490 /* Sources */;
+			membershipExceptions = (
+				Resources/HTTPHeaderStandardValues.json,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		486DF9002D666E570013F490 /* StateTransfer */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				486DF9472D6741DA0013F490 /* Exceptions for "StateTransfer" folder in "Compile Sources" phase from "StateTransfer" target */,
+			);
 			path = StateTransfer;
 			sourceTree = "<group>";
 		};
