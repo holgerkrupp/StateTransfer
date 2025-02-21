@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import Foundation
 
 
 struct ResponseView: View {
@@ -38,6 +39,16 @@ struct ResponseView: View {
         return prettyString
     }
     
+    private var prettyPrintedXML: String {
+        guard let data = message?.data(using: messageEncoding.encoding) else { return "Invalid XML" }
+        do {
+            let xmlDocument = try XMLDocument(data: data, options: .nodePrettyPrint)
+            return xmlDocument.xmlString(options: [.nodePrettyPrint, .nodeCompactEmptyElement])
+        } catch {
+            return "Error formatting XML: \(error)"
+        }
+    }
+    
     private var hexRepresentation: String {
         guard let data = message?.data(using: messageEncoding.encoding) else {
             return "Invalid String"
@@ -51,8 +62,8 @@ struct ResponseView: View {
             return message ?? ""
         case .json:
             return prettyPrintedJSON
-     //   case .xmlhtml:
-       //     return prettyPrintedJSON
+        case .xmlhtml:
+            return prettyPrintedXML
         case .hex:
             return hexRepresentation
         }
@@ -75,7 +86,7 @@ struct ResponseView: View {
     enum DisplayMode: String, CaseIterable {
         case text
         case json
-    //    case xmlhtml = "XML / HTML"
+        case xmlhtml = "XML / HTML"
         case hex
         
     }
@@ -145,12 +156,14 @@ struct ResponseView: View {
                     })
                     .frame(width: 100)
                 }
-                
-                Text(displayRepresentation)
-                    .monospaced()
-                    .lineLimit(nil)
-                    .frame(maxWidth: .infinity, minHeight: 200, alignment: .leading)
-                    .background(.thinMaterial)
+                ScrollView {
+                    Text(displayRepresentation)
+                    
+                        .monospaced()
+                        .lineLimit(nil)
+                        .frame(maxWidth: .infinity, minHeight: 200, alignment: .leading)
+                        .background(.thinMaterial)
+                }
                 if let message {
                     Button("Copy"){
                         copyToClipboard(value: message)
@@ -191,7 +204,7 @@ struct ResponseView: View {
         statusCode = response.statusCode
         messageEncoding = extractEncodingAndContentType(from: response).0 ?? .utf8
         contentType = extractEncodingAndContentType(from: response).1 ?? "text/plain"
-        message = String(decoding: data, as: UTF8.self)
+        message = String(data: data, encoding: messageEncoding.encoding)
         header = transformHeaders(response.allHeaderFields)
         requestTime = elapsedTime
     }
@@ -224,9 +237,9 @@ struct ResponseView: View {
     func extractEncodingAndContentType(from response: URLResponse?) -> (BodyEncoding?, String?) {
         guard let httpResponse = response as? HTTPURLResponse else { return (nil, nil) }
 
-      
+        // Read "Content-Type" header
         if let contentType = httpResponse.allHeaderFields["Content-Type"] as? String {
-            
+            // Extract charset from Content-Type (e.g., "application/json; charset=utf-8")
             let components = contentType.lowercased().components(separatedBy: ";")
             let mimeType = components.first?.trimmingCharacters(in: .whitespaces)
 
@@ -234,7 +247,7 @@ struct ResponseView: View {
             if let charsetComponent = components.first(where: { $0.contains("charset=") }) {
                 let charset = charsetComponent.replacingOccurrences(of: "charset=", with: "").trimmingCharacters(in: .whitespaces)
 
-                
+                // Match against your BodyEncoding enum
                 encoding = BodyEncoding.allCases.first { $0.value.contains(charset) }
             }
 
@@ -243,7 +256,10 @@ struct ResponseView: View {
 
         return (nil, nil)
     }
- 
+
+
+
+
 }
 
 #Preview {

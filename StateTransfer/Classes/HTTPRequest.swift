@@ -89,6 +89,8 @@ struct HTTPRequest: Codable {
     func run() async{
        
         guard let request else { return  }
+        
+        dump(request)
 
         let session = createSession(followRedirect: follorRedirects)
         let startTime = DispatchTime.now()
