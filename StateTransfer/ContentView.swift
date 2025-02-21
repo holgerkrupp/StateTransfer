@@ -20,13 +20,13 @@ struct ContentView: View {
                 Divider()
                 RequestParamterView(header: $document.request.parameters, parameterEncoding: $document.request.parameterEncoding)
                 Divider()
-                RequestBodyView(message: $document.request.body)
+                RequestBodyView(message: $document.request.body, bodyEncoding: $document.request.bodyEncoding)
             }
             .padding()
             .frame(maxWidth: 500)
             VStack{
-                RequestView(request: $document.request)
-                Spacer()
+              //  RequestView(request: $document.request)
+              //  Spacer()
                 ResponseView()
                  
             }

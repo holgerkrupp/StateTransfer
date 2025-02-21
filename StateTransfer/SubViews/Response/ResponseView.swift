@@ -10,31 +10,34 @@ import Combine
 
 
 struct ResponseView: View {
-    @State private var statusCode: Int?
+    @State private var statusCode: Int = 0
     @State private var message: String?
+    @State private var messageEncoding: BodyEncoding = .utf8
+    @State private var contentType: String = "text/plain"
     @State private var header: [HeaderEntry] = []
     @State private var displayOption: DisplayMode = .text
     @State private var requestTime: Double?
     
     private var textRepresentation: String {
         let Stringheader = "Field\tValue"
-        let rows = header.map { "\($0.field)\t\($0.value)" }
+        let rows = header.map { "\($0.key)\t\($0.value)" }
         return ([Stringheader] + rows).joined(separator: "\n")
     }
     
+    @State private var sortOrder = [KeyPathComparator(\HeaderEntry.key)]
     
     private var prettyPrintedJSON: String {
-        guard let data = message?.data(using: .utf8),
+        guard let data = message?.data(using: messageEncoding.encoding),
               let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []),
               let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted),
-              let prettyString = String(data: prettyData, encoding: .utf8) else {
+              let prettyString = String(data: prettyData, encoding: messageEncoding.encoding) else {
             return "Invalid JSON"
         }
         return prettyString
     }
     
     private var hexRepresentation: String {
-        guard let data = message?.data(using: .utf8) else {
+        guard let data = message?.data(using: messageEncoding.encoding) else {
             return "Invalid String"
         }
         return data.map { String(format: "%02hhx", $0) }.joined()
@@ -52,6 +55,20 @@ struct ResponseView: View {
             return hexRepresentation
         }
     }
+    private var colorForStatusCode: Color {
+        switch statusCode {
+        case 200..<300: // Success (Green)
+            return Color.green.opacity(0.7) // Soft green
+        case 300..<400: // Redirect (Blueish)
+            return Color.blue.opacity(0.6) // Light blue
+        case 400..<500: // Client Errors (Orange)
+            return Color.orange.opacity(0.7) // Soft orange
+        case 500..<600: // Server Errors (Red)
+            return Color.red.opacity(0.7) // Soft red
+        default: // Unknown (Gray)
+            return Color.gray.opacity(0.5) // Neutral gray
+        }
+    }
 
     enum DisplayMode: String, CaseIterable {
         case text
@@ -66,10 +83,22 @@ struct ResponseView: View {
     
     var body: some View {
         VStack {
-            if statusCode != nil {
-    
-            Text("Statuscode: \(statusCode ?? 0) - \(HTTPURLResponse.localizedString(forStatusCode: statusCode ?? 0))")
-                Text(requestTime.map { "Response time: \($0.formatted()) ms" } ?? "")
+            if statusCode != 0 {
+                HStack{
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(colorForStatusCode)
+                        .frame(width: 50, height: 30)
+                        .overlay{
+                            Text(statusCode.description)
+                        }
+                    VStack{
+                        Text("\(HTTPURLResponse.localizedString(forStatusCode: statusCode))")
+                            .font(.title)
+                            .lineLimit(3)
+                            .minimumScaleFactor(0.1)
+                        Text(requestTime.map { "Response time: \($0.formatted(.number.precision(.fractionLength(0)))) ms" } ?? "")
+                    }
+                }
             }
             Spacer()
             HStack{
@@ -78,9 +107,9 @@ struct ResponseView: View {
                 Spacer()
             }
            
-            Table(header) {
+            Table(header.sorted(by: { $0.key < $1.key }),sortOrder: $sortOrder) {
                 TableColumn("Field") { column in
-                    Text(column.field)
+                    Text(column.key)
                     }
                             .width(min: 150, ideal: 200, max: 300)
                             
@@ -140,6 +169,8 @@ struct ResponseView: View {
     private func loadHTTPResponse(output: NotificationCenter.Publisher.Output)  {
         guard let (data, response, elapsedTime) = output.object as? (Data, HTTPURLResponse, Double) else { return  }
         statusCode = response.statusCode
+        messageEncoding = extractEncodingAndContentType(from: response).0 ?? .utf8
+        contentType = extractEncodingAndContentType(from: response).1 ?? "text/plain"
         message = String(decoding: data, as: UTF8.self)
         header = transformHeaders(response.allHeaderFields)
         requestTime = elapsedTime
@@ -166,8 +197,31 @@ struct ResponseView: View {
                 value = "\(entry.value)" // Fallback for unknown types
             }
 
-            result.append(HeaderEntry(active: false, field: key, value: value))
+            result.append(HeaderEntry(active: false, key: key, value: value))
         }
+    }
+    
+    func extractEncodingAndContentType(from response: URLResponse?) -> (BodyEncoding?, String?) {
+        guard let httpResponse = response as? HTTPURLResponse else { return (nil, nil) }
+
+      
+        if let contentType = httpResponse.allHeaderFields["Content-Type"] as? String {
+            
+            let components = contentType.lowercased().components(separatedBy: ";")
+            let mimeType = components.first?.trimmingCharacters(in: .whitespaces)
+
+            var encoding: BodyEncoding?
+            if let charsetComponent = components.first(where: { $0.contains("charset=") }) {
+                let charset = charsetComponent.replacingOccurrences(of: "charset=", with: "").trimmingCharacters(in: .whitespaces)
+
+                
+                encoding = BodyEncoding.allCases.first { $0.value.contains(charset) }
+            }
+
+            return (encoding, mimeType)
+        }
+
+        return (nil, nil)
     }
  
 }

@@ -14,44 +14,74 @@ struct HTTPRequest: Codable {
     var parameters: [HeaderEntry] = []
     var parameterEncoding: ParameterEncoding = .form
     var body: String = ""
+    var bodyEncoding: BodyEncoding = .utf8
+
     var follorRedirects: Bool = true
     
     
     
     
-    var request : URLRequest? {
+    var request: URLRequest? {
         guard let url else { return nil }
         var request = URLRequest(url: url)
-        
-        switch method {
-        
-        case .get:
-            var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-            urlComponents.queryItems = parameters.map { URLQueryItem(name: $0.field, value: $0.value) }
 
+        switch method {
+        case .get, .head, .options, .trace, .connect:
+           
+            var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+            urlComponents.queryItems = parameters
+                .filter { $0.active }
+                .map { URLQueryItem(name: $0.key, value: $0.value) }
             request = URLRequest(url: urlComponents.url!)
-        case .post:
-            break
-            /*
-             
-             Need to check the Body and might need to merge the parameters and the body in one JSON
-             
-             
-             */
-        default:
-            break
+
+        case .post, .put, .patch, .delete:
+            switch parameterEncoding {
+            case .form:
+                let bodyString = parameters
+                    .filter { $0.active }
+                    .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)" }
+                    .joined(separator: "&")
+                request.httpBody = bodyString.data(using: bodyEncoding.encoding)
+
+            case .json:
+                var jsonBody: [String: Any] = [:]
+
+                
+                if let existingBody = request.httpBody,
+                   let existingJson = try? JSONSerialization.jsonObject(with: existingBody, options: []) as? [String: Any] {
+                    jsonBody = existingJson
+                }
+
+                
+                for param in parameters where param.active {
+                    jsonBody[param.key] = param.value
+                }
+
+              
+                request.httpBody = try? JSONSerialization.data(withJSONObject: jsonBody, options: [])
+            }
         }
-        
-        
-       
+
         request.httpMethod = method.rawValue
-        if body.count > 0 {
-            request.httpBody = body.data(using: .utf8)
-        }
+
         
-        for entry in header {
-            request.addValue(entry.value, forHTTPHeaderField: entry.field)
+        if body.count > 0, let bodyData = body.data(using: bodyEncoding.encoding) {
+            if request.httpBody == nil {
+                request.httpBody = bodyData
+            } else {
+                var combinedBody = (try? JSONSerialization.jsonObject(with: request.httpBody!, options: []) as? [String: Any]) ?? [:]
+                if let newBody = try? JSONSerialization.jsonObject(with: bodyData, options: []) as? [String: Any] {
+                    combinedBody.merge(newBody) { _, new in new }
+                }
+                request.httpBody = try? JSONSerialization.data(withJSONObject: combinedBody, options: [])
+            }
         }
+
+       
+        for entry in header.filter({ $0.active }) {
+            request.addValue(entry.value, forHTTPHeaderField: entry.key)
+        }
+
         return request
     }
     
@@ -90,6 +120,71 @@ enum ParameterEncoding: String, CaseIterable, Codable {
     case json = "JSON encoded"
     
 }
+
+
+enum BodyEncoding: String, CaseIterable, Codable {
+    case utf8 = "UTF-8"
+    case utf16 = "UTF-16"
+    case utf16LE = "UTF-16LE"
+    case utf16BE = "UTF-16BE"
+    case utf32 = "UTF-32"
+    case utf32LE = "UTF-32LE"
+    case utf32BE = "UTF-32BE"
+    case iso_8859_1 = "ISO-8859-1 (Latin-1)"
+    case ascii = "ASCII"
+    case shiftJIS = "Shift-JIS"
+
+    var value: String {
+        switch self {
+        case .utf8:
+            return "charset=utf-8"
+        case .utf16:
+            return "charset=utf-16"
+        case .utf16LE:
+            return "charset=utf-16le"
+        case .utf16BE:
+            return "charset=utf-16be"
+        case .utf32:
+            return "charset=utf-32"
+        case .utf32LE:
+            return "charset=utf-32le"
+        case .utf32BE:
+            return "charset=utf-32be"
+        case .iso_8859_1:
+            return "charset=iso-8859-1"
+        case .ascii:
+            return "charset=ascii"
+        case .shiftJIS:
+            return "charset=shift_jis"
+        }
+    }
+
+    var encoding: String.Encoding {
+        switch self {
+        case .utf8:
+            return .utf8
+        case .utf16:
+            return .utf16
+        case .utf16LE:
+            return .utf16LittleEndian
+        case .utf16BE:
+            return .utf16BigEndian
+        case .utf32:
+            return .utf32
+        case .utf32LE:
+            return .utf32LittleEndian
+        case .utf32BE:
+            return .utf32BigEndian
+        case .iso_8859_1:
+            return .isoLatin1
+        case .ascii:
+            return .ascii
+        case .shiftJIS:
+            return .shiftJIS
+        }
+    }
+}
+
 enum HTTPMethod: String, CaseIterable, Codable {
     case get
     case post
@@ -107,7 +202,7 @@ enum HTTPMethod: String, CaseIterable, Codable {
 struct HeaderEntry: Equatable, Identifiable, Codable {
     var id: UUID = UUID()
     var active: Bool
-    var field: String
+    var key: String
     var value: String
     
 }

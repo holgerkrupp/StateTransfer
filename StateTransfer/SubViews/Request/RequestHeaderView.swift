@@ -7,17 +7,19 @@
 
 import SwiftUI
 
+enum FieldType: String {
+    case header
+    case parameter
+}
 
-
-struct RequestParamterView: View {
+struct RequestHeaderView: View {
     @Binding var header: [HeaderEntry]
-    @Binding var parameterEncoding: ParameterEncoding
    
-    @State private var sortOrder = [KeyPathComparator(\HeaderEntry.field)]
-    
+    @State private var sortOrder = [KeyPathComparator(\HeaderEntry.key)]
     @State private var selection: Set<HeaderEntry.ID> = []
     
     var body: some View {
+       
         Table(header, selection: $selection, sortOrder: $sortOrder) {
             
             TableColumn("") { object in
@@ -36,45 +38,54 @@ struct RequestParamterView: View {
             .width(20)
             
             
-            TableColumn("Parameter Name"){ object in
-               
-                    HeaderFieldSelector(object: Binding(
-                        get: { object.field },
-                        set: { newValue in
-                            if let index = header.firstIndex(where: { $0.id == object.id }) {
-                                header[index].field = newValue
+            TableColumn("Header Field"){ object in
+                HeaderFieldSelector(object: Binding(
+                    get: { object.key },
+                    set: { newValue in
+                        if let index = header.firstIndex(where: { $0.id == object.id }) {
+                            /*
+                            if newValue != header[index].key {
+                                header[index].value = ""
                             }
+                             */
+                            header[index].key = newValue
+                            
                         }
-                    ))
-               
+                      
+                    }
+                ))
+                
                  
             }
             
-            TableColumn("Parameter Value"){ object in
-                TextField("", text: Binding(
-                    get: { object.value },
-                    set: { newValue in
-                        if let index = header.firstIndex(where: { $0.id == object.id }) {
-                            header[index].value = newValue
+            TableColumn("Header Value") { object in
+                HeaderValueSelector(
+                    object: Binding(
+                        get: { object.value },
+                        set: { newValue in
+                            if let index = header.firstIndex(where: { $0.id == object.id }) {
+                                header[index].value = newValue
+                            }
                         }
-                    }
-                ))
+                    ),
+                    fieldValues: {
+                        if let field = HeaderFields(rawValue: object.key) {
+                            return field.values
+                        }
+                        return []
+                    }()
+                )
             }
         }
+        
         
         .onChange(of: sortOrder) { _, sortOrder in
                    header.sort(using: sortOrder)
                }
         HStack{
-            Picker("", selection: $parameterEncoding, content: {
-                ForEach(ParameterEncoding.allCases, id: \.self) { encoding in
-                    Text(encoding.rawValue).tag(encoding)
-                }
-            })
-            .frame(width: 200)
             Spacer()
             Button {
-                header.append(HeaderEntry(id: UUID(), active: false, field: "parameter", value: "value"))
+                header.append(HeaderEntry(id: UUID(), active: false, key: "new", value: ""))
             } label: {
                 Text("+")
             }
@@ -85,10 +96,7 @@ struct RequestParamterView: View {
             }
         }
     }
+
+    
 }
 
-#Preview {
-    @Previewable @State var headers: [HeaderEntry] = []
-    @Previewable @State var parameterEncoding: ParameterEncoding = .json
-    RequestHeaderView(header: $headers)
-}
