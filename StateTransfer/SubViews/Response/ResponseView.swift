@@ -31,8 +31,14 @@ struct ResponseView: View {
     
     private var prettyPrintedJSON: String {
         guard let data = message?.data(using: messageEncoding.encoding),
-              let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []),
-              let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted),
+              let jsonObject = try? JSONSerialization.jsonObject(
+                with: data,
+                options: []
+              ),
+              let prettyData = try? JSONSerialization.data(
+                withJSONObject: jsonObject,
+                options: .prettyPrinted
+              ),
               let prettyString = String(data: prettyData, encoding: messageEncoding.encoding) else {
             return "Invalid JSON"
         }
@@ -40,10 +46,18 @@ struct ResponseView: View {
     }
     
     private var prettyPrintedXML: String {
-        guard let data = message?.data(using: messageEncoding.encoding) else { return "Invalid XML" }
+        guard let data = message?.data(using: messageEncoding.encoding) else {
+            return "Invalid XML"
+        }
         do {
-            let xmlDocument = try XMLDocument(data: data, options: .nodePrettyPrint)
-            return xmlDocument.xmlString(options: [.nodePrettyPrint, .nodeCompactEmptyElement])
+            let xmlDocument = try XMLDocument(
+                data: data,
+                options: .nodePrettyPrint
+            )
+            return xmlDocument
+                .xmlString(
+                    options: [.nodePrettyPrint, .nodeCompactEmptyElement]
+                )
         } catch {
             return "Error formatting XML: \(error)"
         }
@@ -82,7 +96,7 @@ struct ResponseView: View {
             return Color.gray.opacity(0.5) // Neutral gray
         }
     }
-
+    
     enum DisplayMode: String, CaseIterable {
         case text
         case json
@@ -108,11 +122,16 @@ struct ResponseView: View {
                             Text(statusCode.description)
                         }
                     VStack{
-                        Text("\(HTTPURLResponse.localizedString(forStatusCode: statusCode))")
-                            .font(.title)
-                            .lineLimit(3)
-                            .minimumScaleFactor(0.1)
-                        Text(requestTime.map { "Response time: \($0.formatted(.number.precision(.fractionLength(0)))) ms" } ?? "")
+                        Text(
+                            "\(HTTPURLResponse.localizedString(forStatusCode: statusCode))"
+                        )
+                        .font(.title)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.1)
+                        Text(
+                            requestTime
+                                .map { "Response time: \($0.formatted(.number.precision(.fractionLength(0)))) ms"
+                                } ?? "")
                     }
                 }
             }
@@ -122,26 +141,33 @@ struct ResponseView: View {
                     .font(.headline)
                 Spacer()
             }
-           
-            Table(header.sorted(by: { $0.key < $1.key }),sortOrder: $sortOrder) {
+            
+            Table(
+                header.sorted(by: { $0.key < $1.key }),
+                sortOrder: $sortOrder
+            ) {
                 TableColumn("Field") { column in
                     Text(column.key)
-                    }
-                            .width(min: 150, ideal: 200, max: 300)
-                            
-                        
-                        TableColumn("Value") { column in Text(column.value) }
-                            .width(min: 200, ideal: 400, max: 600)
-                    }
+                        .monospaced()
+                }
+                .width(min: 150, ideal: 200, max: 300)
+                
+                
+                TableColumn("Value") { column in
+                    Text(column.value)
+                        .monospaced()
+                }
+                .width(min: 200, ideal: 400, max: 600)
+            }
             if header != [] {
                 Button("Copy"){
                     copyToClipboard(value: textRepresentation)
-                    }
+                }
             }
-
-          
             
-           
+            
+            
+            
             
             Divider()
             if message != nil {
@@ -161,7 +187,11 @@ struct ResponseView: View {
                     
                         .monospaced()
                         .lineLimit(nil)
-                        .frame(maxWidth: .infinity, minHeight: 200, alignment: .leading)
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: 200,
+                            alignment: .leading
+                        )
                         .background(.thinMaterial)
                 }
                 if let message {
@@ -182,13 +212,15 @@ struct ResponseView: View {
     }
     
     private func copyToClipboard(value: String) {
-          let pasteboard = NSPasteboard.general
-          pasteboard.clearContents()
-          pasteboard.setString(value, forType: .string)
-      }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(value, forType: .string)
+    }
     
     private func loadHTTPError(output: NotificationCenter.Publisher.Output)  {
-        guard let (id, error) = output.object as? (UUID, Error), id == requestid else { return  }
+        guard let (id, error) = output.object as? (UUID, Error), id == requestid else {
+            return
+        }
         
         statusCode = 0
         
@@ -199,11 +231,19 @@ struct ResponseView: View {
         
     }
     
-    private func loadHTTPResponse(output: NotificationCenter.Publisher.Output)  {
-        guard let (id, data, response, elapsedTime) = output.object as? (UUID, Data, HTTPURLResponse, Double), id == requestid else { return  }
+    private func loadHTTPResponse(
+        output: NotificationCenter.Publisher.Output
+    )  {
+        guard let (id, data, response, elapsedTime) = output.object as? (UUID, Data, HTTPURLResponse, Double), id == requestid else {
+            return
+        }
         statusCode = response.statusCode
-        messageEncoding = extractEncodingAndContentType(from: response).0 ?? .utf8
-        contentType = extractEncodingAndContentType(from: response).1 ?? "text/plain"
+        messageEncoding = extractEncodingAndContentType(
+            from: response
+        ).0 ?? .utf8
+        contentType = extractEncodingAndContentType(
+            from: response
+        ).1 ?? "text/plain"
         message = String(data: data, encoding: messageEncoding.encoding)
         header = transformHeaders(response.allHeaderFields)
         requestTime = elapsedTime
@@ -212,9 +252,13 @@ struct ResponseView: View {
     private func transformHeaders(_ allHeaderFields: [AnyHashable: Any]) -> [HeaderEntry] {
         let formatter = DateFormatter()
         formatter.dateFormat = "E, d MMM yyyy HH:mm:ss Z" // Common HTTP date format
-
-        return allHeaderFields.reduce(into: [HeaderEntry]()) { result, entry in
-            guard let key = entry.key as? String else { return } // Ensure key is String
+        
+        return allHeaderFields.reduce(into: [HeaderEntry]()) {
+ result,
+            entry in
+            guard let key = entry.key as? String else {
+                return
+            } // Ensure key is String
             
             let value: String
             switch entry.value {
@@ -229,41 +273,55 @@ struct ResponseView: View {
             default:
                 value = "\(entry.value)" // Fallback for unknown types
             }
-
+            
             result.append(HeaderEntry(active: false, key: key, value: value))
         }
     }
     
-    func extractEncodingAndContentType(from response: URLResponse?) -> (BodyEncoding?, String?) {
-        guard let httpResponse = response as? HTTPURLResponse else { return (nil, nil) }
-
+    func extractEncodingAndContentType(from response: URLResponse?) -> (
+        BodyEncoding?,
+        String?
+    ) {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            return (nil, nil)
+        }
+        
         // Read "Content-Type" header
         if let contentType = httpResponse.allHeaderFields["Content-Type"] as? String {
             // Extract charset from Content-Type (e.g., "application/json; charset=utf-8")
-            let components = contentType.lowercased().components(separatedBy: ";")
-            let mimeType = components.first?.trimmingCharacters(in: .whitespaces)
-
+            let components = contentType.lowercased().components(
+                separatedBy: ";"
+            )
+            let mimeType = components.first?.trimmingCharacters(
+                in: .whitespaces
+            )
+            
             var encoding: BodyEncoding?
-            if let charsetComponent = components.first(where: { $0.contains("charset=") }) {
-                let charset = charsetComponent.replacingOccurrences(of: "charset=", with: "").trimmingCharacters(in: .whitespaces)
-
+            if let charsetComponent = components.first(
+                where: { $0.contains("charset=")
+                }) {
+                let charset = charsetComponent.replacingOccurrences(of: "charset=", with: "").trimmingCharacters(
+                    in: .whitespaces
+                )
+                
                 // Match against your BodyEncoding enum
-                encoding = BodyEncoding.allCases.first { $0.value.contains(charset) }
+                encoding = BodyEncoding.allCases
+                    .first { $0.value.contains(charset) }
             }
-
+            
             return (encoding, mimeType)
         }
-
+        
         return (nil, nil)
     }
-
-
-
-
+    
+    
+    
+    
 }
 
 #Preview {
     @Previewable @State var id: UUID = UUID()
-
+    
     ResponseView(requestid: $id)
 }
