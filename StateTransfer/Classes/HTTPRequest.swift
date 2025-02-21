@@ -8,6 +8,7 @@
 import Foundation
 
 struct HTTPRequest: Codable {
+    var id = UUID()
     var url: URL? = URL(string: "http://localhost:3000/")
     var method: HTTPMethod = .get
     var header: [HeaderEntry] = []
@@ -97,12 +98,15 @@ struct HTTPRequest: Codable {
             let endTime = DispatchTime.now()
             let elapsedTime = Double(endTime.uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
             DispatchQueue.main.async{
-                NotificationCenter.default.post(name: NSNotification.Name("HTTPResponse"), object: (data, response, elapsedTime), userInfo: (response as? HTTPURLResponse)?.allHeaderFields)
+                NotificationCenter.default.post(name: NSNotification.Name("HTTPResponse"), object: (id, data, response, elapsedTime), userInfo: (response as? HTTPURLResponse)?.allHeaderFields)
            
             }
             
         }catch{
             print(error)
+            DispatchQueue.main.async{
+                NotificationCenter.default.post(name: NSNotification.Name("HTTPError"), object: (id, error))
+            }
         }
     }
    private func createSession(followRedirect: Bool) -> URLSession {
@@ -183,6 +187,20 @@ enum BodyEncoding: String, CaseIterable, Codable {
             return .shiftJIS
         }
     }
+    var unicodeEncoding: Any.Type {
+        switch self {
+        case .utf8:
+            return Unicode.UTF8.self
+        case .utf16, .utf16LE, .utf16BE:
+            return Unicode.UTF16.self
+        case .utf32, .utf32LE, .utf32BE:
+            return Unicode.UTF32.self
+        default:
+            return Unicode.UTF8.self // No direct mapping in Unicode.Encoding
+        }
+    }
+    
+
 }
 
 enum HTTPMethod: String, CaseIterable, Codable {

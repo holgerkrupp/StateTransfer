@@ -18,6 +18,8 @@ struct ResponseView: View {
     @State private var displayOption: DisplayMode = .text
     @State private var requestTime: Double?
     
+    @Binding var requestid: UUID
+    
     private var textRepresentation: String {
         let Stringheader = "Field\tValue"
         let rows = header.map { "\($0.key)\t\($0.value)" }
@@ -80,6 +82,9 @@ struct ResponseView: View {
     
     private let response = NotificationCenter.default
         .publisher(for: NSNotification.Name("HTTPResponse"))
+    
+    private let error = NotificationCenter.default
+        .publisher(for: NSNotification.Name("HTTPError"))
     
     var body: some View {
         VStack {
@@ -158,6 +163,9 @@ struct ResponseView: View {
         .onReceive(response) { (output) in
             self.loadHTTPResponse(output: output)
         }
+        .onReceive(error) { (output) in
+            self.loadHTTPError(output: output)
+        }
     }
     
     private func copyToClipboard(value: String) {
@@ -166,8 +174,20 @@ struct ResponseView: View {
           pasteboard.setString(value, forType: .string)
       }
     
+    private func loadHTTPError(output: NotificationCenter.Publisher.Output)  {
+        guard let (id, error) = output.object as? (UUID, Error), id == requestid else { return  }
+        
+        statusCode = 0
+        
+        message = error.localizedDescription
+        header = []
+        requestTime = 0
+        
+        
+    }
+    
     private func loadHTTPResponse(output: NotificationCenter.Publisher.Output)  {
-        guard let (data, response, elapsedTime) = output.object as? (Data, HTTPURLResponse, Double) else { return  }
+        guard let (id, data, response, elapsedTime) = output.object as? (UUID, Data, HTTPURLResponse, Double), id == requestid else { return  }
         statusCode = response.statusCode
         messageEncoding = extractEncodingAndContentType(from: response).0 ?? .utf8
         contentType = extractEncodingAndContentType(from: response).1 ?? "text/plain"
@@ -227,5 +247,7 @@ struct ResponseView: View {
 }
 
 #Preview {
-    ResponseView()
+    @Previewable @State var id: UUID = UUID()
+
+    ResponseView(requestid: $id)
 }

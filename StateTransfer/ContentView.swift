@@ -27,7 +27,7 @@ struct ContentView: View {
             VStack{
               //  RequestView(request: $document.request)
               //  Spacer()
-                ResponseView()
+                ResponseView(requestid: $document.request.id)
                  
             }
             .frame(minWidth: 200)
