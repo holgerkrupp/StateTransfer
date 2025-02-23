@@ -13,8 +13,9 @@ import Foundation
 struct ResponseView: View {
     @State private var statusCode: Int = 0
     @State private var message: String?
+    @State private var image: Image?
     @State private var messageEncoding: BodyEncoding = .utf8
-    @State private var contentType: String = "text/plain"
+    @State private var contentType: ContentType = ContentType.text(.plain)
     @State private var header: [HeaderEntry] = []
     @State private var displayOption: DisplayMode = .text
     @State private var requestTime: Double?
@@ -76,7 +77,7 @@ struct ResponseView: View {
             return message ?? ""
         case .json:
             return prettyPrintedJSON
-        case .xmlhtml:
+        case .xml:
             return prettyPrintedXML
         case .hex:
             return hexRepresentation
@@ -100,7 +101,7 @@ struct ResponseView: View {
     enum DisplayMode: String, CaseIterable {
         case text
         case json
-        case xmlhtml = "XML / HTML"
+        case xml
         case hex
         
     }
@@ -170,36 +171,66 @@ struct ResponseView: View {
             
             
             Divider()
-            if message != nil {
-                HStack {
-                    Text("Response Body")
-                        .font(.headline)
-                    Spacer()
-                    Picker("", selection: $displayOption, content: {
-                        ForEach(DisplayMode.allCases, id: \.self) { display in
-                            Text(display.rawValue).tag(display)
-                        }
-                    })
-                    .frame(width: 100)
-                }
-                ScrollView {
-                    Text(displayRepresentation)
-                    
-                        .monospaced()
-                        .lineLimit(nil)
+            
+                
+                switch contentType {
+                case .text:
+                    HStack {
+                        Text("Response Body")
+                            .font(.headline)
+                        
+                        Spacer()
+                        Picker("", selection: $displayOption, content: {
+                            ForEach(DisplayMode.allCases, id: \.self) { display in
+                                Text(display.rawValue).tag(display)
+                            }
+                        })
+                        .frame(width: 100)
+                    }
+                    ScrollView {
+                        Text(displayRepresentation)
+                        
+                            .monospaced()
+                            .lineLimit(nil)
+                            .frame(
+                                maxWidth: .infinity,
+                                minHeight: 200,
+                                alignment: .leading
+                            )
+                            .background(.thinMaterial)
+                    }
+                case .image(_):
+                    if let image{
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(
+                                maxWidth: .infinity,
+                                minHeight: 200,
+                                alignment: .leading
+                            )
+                    }else{
+                        Text("Image not found for this Content-Type")
+                            .frame(
+                                maxWidth: .infinity,
+                                minHeight: 200,
+                                alignment: .leading
+                            )
+                    }
+                case .unknown(_):
+                    Text("Unknown Content-Type")
                         .frame(
                             maxWidth: .infinity,
                             minHeight: 200,
                             alignment: .leading
                         )
-                        .background(.thinMaterial)
                 }
                 if let message {
                     Button("Copy"){
                         copyToClipboard(value: message)
                     }
                 }
-            }
+            
             Spacer()
         }
         .textSelection(.enabled)
@@ -243,8 +274,17 @@ struct ResponseView: View {
         ).0 ?? .utf8
         contentType = extractEncodingAndContentType(
             from: response
-        ).1 ?? "text/plain"
-        message = String(data: data, encoding: messageEncoding.encoding)
+        ).1 ?? ContentType.text(.plain)
+        switch contentType {
+        case .text:
+            message = String(data: data, encoding: messageEncoding.encoding)
+        case .image(_):
+            if let nsImage = NSImage(data: data) {
+                image = Image(nsImage: nsImage)
+            }
+        case .unknown(_):
+            break
+        }
         header = transformHeaders(response.allHeaderFields)
         requestTime = elapsedTime
     }
@@ -280,7 +320,7 @@ struct ResponseView: View {
     
     func extractEncodingAndContentType(from response: URLResponse?) -> (
         BodyEncoding?,
-        String?
+        ContentType?
     ) {
         guard let httpResponse = response as? HTTPURLResponse else {
             return (nil, nil)
@@ -296,6 +336,8 @@ struct ResponseView: View {
                 in: .whitespaces
             )
             
+            let cType: ContentType? = .from(mimeType ?? "")
+            
             var encoding: BodyEncoding?
             if let charsetComponent = components.first(
                 where: { $0.contains("charset=")
@@ -309,7 +351,7 @@ struct ResponseView: View {
                     .first { $0.value.contains(charset) }
             }
             
-            return (encoding, mimeType)
+            return (encoding, cType)
         }
         
         return (nil, nil)

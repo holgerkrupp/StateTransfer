@@ -17,6 +17,16 @@
 		486DF9722D68AD1C0013F490 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		486DF9762D6BAFEF0013F490 /* Exceptions for "StateTransfer" folder in "StateTransfer" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 486DF8FD2D666E570013F490 /* StateTransfer */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 		486DF9472D6741DA0013F490 /* Exceptions for "StateTransfer" folder in "Compile Sources" phase from "StateTransfer" target */ = {
 			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
@@ -31,6 +41,7 @@
 		486DF9002D666E570013F490 /* StateTransfer */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				486DF9762D6BAFEF0013F490 /* Exceptions for "StateTransfer" folder in "StateTransfer" target */,
 				486DF9472D6741DA0013F490 /* Exceptions for "StateTransfer" folder in "Compile Sources" phase from "StateTransfer" target */,
 			);
 			path = StateTransfer;
@@ -282,6 +293,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StateTransfer/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -311,6 +323,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StateTransfer/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
