@@ -15,6 +15,9 @@ struct ContentView: View {
             VStack{
                 EndPointView(endpoint: $document.request.url, method: $document.request.method)
                 Toggle("Follow Redirects", isOn: $document.request.follorRedirects)
+                
+                AuthenticationView(credentials: $document.request.authorizationCredentials, url: document.request.url?.host ?? "")
+                
                 Divider()
                 RequestHeaderView(header: $document.request.header)
                 Divider()

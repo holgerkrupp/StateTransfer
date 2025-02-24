@@ -287,6 +287,8 @@ struct ResponseView: View {
         }
         header = transformHeaders(response.allHeaderFields)
         requestTime = elapsedTime
+        
+        
     }
     
     private func transformHeaders(_ allHeaderFields: [AnyHashable: Any]) -> [HeaderEntry] {

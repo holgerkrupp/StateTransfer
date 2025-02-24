@@ -7,6 +7,8 @@
 
 import Foundation
 
+
+
 struct HTTPRequest: Codable {
     var id = UUID()
     var url: URL? = URL(string: "http://localhost:3000/")
@@ -18,6 +20,8 @@ struct HTTPRequest: Codable {
     var bodyEncoding: BodyEncoding = .utf8
 
     var follorRedirects: Bool = true
+    
+    var authorizationCredentials: Authentication = Authentication()
     
     
     private enum CodingKeys: String, CodingKey {
@@ -35,7 +39,21 @@ struct HTTPRequest: Codable {
     var request: URLRequest? {
         guard let url else { return nil }
         var request = URLRequest(url: url)
+        
+        
+        // METHOD
+        request.httpMethod = method.rawValue
 
+        // HEADER
+        
+        if authorizationCredentials.active {
+            request.setValue(basicAuthHeader(username: authorizationCredentials.username, password: authorizationCredentials.password), forHTTPHeaderField: "Authorization")
+        }
+        for entry in header.filter({ $0.active }) {
+            request.addValue(entry.value, forHTTPHeaderField: entry.key)
+        }
+
+        // BODY
         switch method {
         case .get, .head, .options, .trace, .connect:
            
@@ -43,7 +61,7 @@ struct HTTPRequest: Codable {
             urlComponents.queryItems = parameters
                 .filter { $0.active }
                 .map { URLQueryItem(name: $0.key, value: $0.value) }
-            request = URLRequest(url: urlComponents.url!)
+            request.url = urlComponents.url!
 
         case .post, .put, .patch, .delete:
             switch parameterEncoding {
@@ -72,8 +90,8 @@ struct HTTPRequest: Codable {
                 request.httpBody = try? JSONSerialization.data(withJSONObject: jsonBody, options: [])
             }
         }
-
-        request.httpMethod = method.rawValue
+        
+    
 
         
         if body.count > 0, let bodyData = body.data(using: bodyEncoding.encoding) {
@@ -89,11 +107,16 @@ struct HTTPRequest: Codable {
         }
 
        
-        for entry in header.filter({ $0.active }) {
-            request.addValue(entry.value, forHTTPHeaderField: entry.key)
-        }
+
 
         return request
+    }
+    
+    func basicAuthHeader(username: String, password: String) -> String {
+        let credentials = "\(username):\(password)"
+        guard let data = credentials.data(using: .utf8) else { return "" }
+        let base64Credentials = data.base64EncodedString()
+        return "Basic \(base64Credentials)"
     }
     
     func run() async{
@@ -107,11 +130,20 @@ struct HTTPRequest: Codable {
 
         do{
             let (data, response) = try await session.data(for: request)
+            
             let endTime = DispatchTime.now()
             let elapsedTime = Double(endTime.uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
             DispatchQueue.main.async{
                 NotificationCenter.default.post(name: NSNotification.Name("HTTPResponse"), object: (id, data, response, elapsedTime), userInfo: (response as? HTTPURLResponse)?.allHeaderFields)
-           
+                if (response as? HTTPURLResponse)?.statusCode == 200 {
+                    if let server =  request.url?.host(),
+                       !authorizationCredentials.username.isEmpty,
+                       !authorizationCredentials.password.isEmpty {
+                        KeychainManager.saveCredentials(authorizationCredentials, server: server)
+                    }
+                } else {
+                    print("Invalid credentials, not saving to Keychain.")
+                }
             }
             
         }catch{
@@ -130,110 +162,18 @@ struct HTTPRequest: Codable {
     }
 }
 
-enum ParameterEncoding: String, CaseIterable, Codable {
-    
-    case form = "Form encoded"
-    case json = "JSON encoded"
-    
-}
-
-
-enum BodyEncoding: String, CaseIterable, Codable {
-    case utf8 = "UTF-8"
-    case utf16 = "UTF-16"
-    case utf16LE = "UTF-16LE"
-    case utf16BE = "UTF-16BE"
-    case utf32 = "UTF-32"
-    case utf32LE = "UTF-32LE"
-    case utf32BE = "UTF-32BE"
-    case iso_8859_1 = "ISO-8859-1 (Latin-1)"
-    case ascii = "ASCII"
-    case shiftJIS = "Shift-JIS"
-
-    var value: String {
-        switch self {
-        case .utf8:
-            return "charset=utf-8"
-        case .utf16:
-            return "charset=utf-16"
-        case .utf16LE:
-            return "charset=utf-16le"
-        case .utf16BE:
-            return "charset=utf-16be"
-        case .utf32:
-            return "charset=utf-32"
-        case .utf32LE:
-            return "charset=utf-32le"
-        case .utf32BE:
-            return "charset=utf-32be"
-        case .iso_8859_1:
-            return "charset=iso-8859-1"
-        case .ascii:
-            return "charset=ascii"
-        case .shiftJIS:
-            return "charset=shift_jis"
-        }
-    }
-
-    var encoding: String.Encoding {
-        switch self {
-        case .utf8:
-            return .utf8
-        case .utf16:
-            return .utf16
-        case .utf16LE:
-            return .utf16LittleEndian
-        case .utf16BE:
-            return .utf16BigEndian
-        case .utf32:
-            return .utf32
-        case .utf32LE:
-            return .utf32LittleEndian
-        case .utf32BE:
-            return .utf32BigEndian
-        case .iso_8859_1:
-            return .isoLatin1
-        case .ascii:
-            return .ascii
-        case .shiftJIS:
-            return .shiftJIS
-        }
-    }
-    var unicodeEncoding: Any.Type {
-        switch self {
-        case .utf8:
-            return Unicode.UTF8.self
-        case .utf16, .utf16LE, .utf16BE:
-            return Unicode.UTF16.self
-        case .utf32, .utf32LE, .utf32BE:
-            return Unicode.UTF32.self
-        default:
-            return Unicode.UTF8.self // No direct mapping in Unicode.Encoding
-        }
-    }
-    
-
-}
-
-enum HTTPMethod: String, CaseIterable, Codable {
-    case get
-    case post
-    case put
-    case head
-    case delete
-    case patch
-    case options
-    case connect
-    case trace
-    
-    var description: String { rawValue.uppercased() }
-}
 
 struct HeaderEntry: Equatable, Identifiable, Codable {
     var id: UUID = UUID()
     var active: Bool
     var key: String
     var value: String
+    
+    private enum CodingKeys: String, CodingKey {
+        case active
+        case key
+        case value
+    }
     
 }
 
