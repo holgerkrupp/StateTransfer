@@ -19,6 +19,7 @@ struct HTTPRequest: Codable {
 
     var follorRedirects: Bool = true
     
+    var requestResponse: Response = Response()
     
     private enum CodingKeys: String, CodingKey {
         case url
@@ -96,11 +97,11 @@ struct HTTPRequest: Codable {
         return request
     }
     
-    func run() async{
+     func run() async{
        
         guard let request else { return  }
         
-       // dump(request)
+        
 
         let session = createSession(followRedirect: follorRedirects)
         let startTime = DispatchTime.now()
@@ -108,17 +109,16 @@ struct HTTPRequest: Codable {
         do{
             let (data, response) = try await session.data(for: request)
             let endTime = DispatchTime.now()
-            let elapsedTime = Double(endTime.uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
-            DispatchQueue.main.async{
-                NotificationCenter.default.post(name: NSNotification.Name("HTTPResponse"), object: (id, data, response, elapsedTime), userInfo: (response as? HTTPURLResponse)?.allHeaderFields)
+            requestResponse.elapsedTime = Double(endTime.uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
+            requestResponse.responseData = data
+            requestResponse.response = response as? HTTPURLResponse
+            
            
-            }
             
         }catch{
             print(error)
-            DispatchQueue.main.async{
-                NotificationCenter.default.post(name: NSNotification.Name("HTTPError"), object: (id, error))
-            }
+            requestResponse.responseError = error
+            
         }
     }
    private func createSession(followRedirect: Bool) -> URLSession {

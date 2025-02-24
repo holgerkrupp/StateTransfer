@@ -11,16 +11,37 @@ import Foundation
 
 
 struct ResponseView: View {
-    @State private var statusCode: Int = 0
     @State private var message: String?
     @State private var image: Image?
-    @State private var messageEncoding: BodyEncoding = .utf8
-    @State private var contentType: ContentType = ContentType.text(.plain)
-    @State private var header: [HeaderEntry] = []
     @State private var displayOption: DisplayMode = .text
-    @State private var requestTime: Double?
     
-    @Binding var requestid: UUID
+    @Binding var request: HTTPRequest
+ 
+    
+    private var requestTime: Double? {
+        request.requestResponse?.elapsedTime
+    }
+    
+    private var header: [HeaderEntry] {
+        return transformHeaders(request.requestResponse?.response?.allHeaderFields ?? [:])
+    }
+    
+    private var  messageEncoding: BodyEncoding {
+        return extractEncodingAndContentType(
+            from: request.requestResponse?.response
+        ).0 ?? .utf8
+    }
+    
+    private var  contentType: ContentType {
+        return extractEncodingAndContentType(
+            from: request.requestResponse?.response
+        ).1 ?? ContentType.text(.plain)
+    }
+    
+    
+    private var errorMessage: String? {
+        return request.requestResponse?.responseError?.localizedDescription
+    }
     
     private var textRepresentation: String {
         let Stringheader = "Field\tValue"
@@ -84,7 +105,7 @@ struct ResponseView: View {
         }
     }
     private var colorForStatusCode: Color {
-        switch statusCode {
+        switch request.requestResponse?.statusCode ?? 0{
         case 200..<300: // Success (Green)
             return Color.green.opacity(0.7) // Soft green
         case 300..<400: // Redirect (Blueish)
@@ -109,22 +130,21 @@ struct ResponseView: View {
     private let response = NotificationCenter.default
         .publisher(for: NSNotification.Name("HTTPResponse"))
     
-    private let error = NotificationCenter.default
-        .publisher(for: NSNotification.Name("HTTPError"))
+   
     
     var body: some View {
         VStack {
-            if statusCode != 0 {
+            if request.requestResponse?.statusCode != 0 {
                 HStack{
                     RoundedRectangle(cornerRadius: 8)
                         .fill(colorForStatusCode)
                         .frame(width: 50, height: 30)
                         .overlay{
-                            Text(statusCode.description)
+                            Text(request.requestResponse?.statusCode.description ?? "")
                         }
                     VStack{
                         Text(
-                            "\(HTTPURLResponse.localizedString(forStatusCode: statusCode))"
+                            "\(HTTPURLResponse.localizedString(forStatusCode: request.requestResponse?.statusCode ?? 000))"
                         )
                         .font(.title)
                         .lineLimit(3)
@@ -171,7 +191,20 @@ struct ResponseView: View {
             
             
             Divider()
-            
+            if let errorMessage{
+                ScrollView {
+                    Text(errorMessage)
+                    
+                        .monospaced()
+                        .lineLimit(nil)
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: 200,
+                            alignment: .leading
+                        )
+                        .background(.thinMaterial)
+                }
+            }else{
                 
                 switch contentType {
                 case .text:
@@ -230,16 +263,16 @@ struct ResponseView: View {
                         copyToClipboard(value: message)
                     }
                 }
-            
-            Spacer()
+                
+                Spacer()
+            }
         }
         .textSelection(.enabled)
-        .onReceive(response) { (output) in
-            self.loadHTTPResponse(output: output)
+        .onAppear {
+            self.loadHTTPResponse()
         }
-        .onReceive(error) { (output) in
-            self.loadHTTPError(output: output)
-        }
+        
+      
     }
     
     private func copyToClipboard(value: String) {
@@ -248,35 +281,14 @@ struct ResponseView: View {
         pasteboard.setString(value, forType: .string)
     }
     
-    private func loadHTTPError(output: NotificationCenter.Publisher.Output)  {
-        guard let (id, error) = output.object as? (UUID, Error), id == requestid else {
-            return
-        }
-        
-        statusCode = 0
-        
-        message = error.localizedDescription
-        header = []
-        requestTime = 0
-        
-        
-    }
+
     
-    private func loadHTTPResponse(
-        output: NotificationCenter.Publisher.Output
-    )  {
-        guard let (id, data, response, elapsedTime) = output.object as? (UUID, Data, HTTPURLResponse, Double), id == requestid else {
-            return
-        }
-        statusCode = response.statusCode
-        messageEncoding = extractEncodingAndContentType(
-            from: response
-        ).0 ?? .utf8
-        contentType = extractEncodingAndContentType(
-            from: response
-        ).1 ?? ContentType.text(.plain)
+    private func loadHTTPResponse(){
+        
+        guard let data = request.requestResponse?.responseData else { return  }
         switch contentType {
         case .text:
+            
             message = String(data: data, encoding: messageEncoding.encoding)
         case .image(_):
             if let nsImage = NSImage(data: data) {
@@ -285,8 +297,7 @@ struct ResponseView: View {
         case .unknown(_):
             break
         }
-        header = transformHeaders(response.allHeaderFields)
-        requestTime = elapsedTime
+       
     }
     
     private func transformHeaders(_ allHeaderFields: [AnyHashable: Any]) -> [HeaderEntry] {
@@ -363,7 +374,7 @@ struct ResponseView: View {
 }
 
 #Preview {
-    @Previewable @State var id: UUID = UUID()
+    @Previewable @State var request: HTTPRequest = HTTPRequest.init()
     
-    ResponseView(requestid: $id)
+    ResponseView(request: $request)
 }
