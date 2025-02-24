@@ -20,6 +20,16 @@ struct HTTPRequest: Codable {
     var follorRedirects: Bool = true
     
     
+    private enum CodingKeys: String, CodingKey {
+        case url
+        case method
+        case header
+        case parameters
+        case body
+        case parameterEncoding
+        case bodyEncoding
+        case follorRedirects
+    }
     
     
     var request: URLRequest? {

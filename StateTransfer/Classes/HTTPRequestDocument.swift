@@ -67,8 +67,7 @@ struct HTTPRequestDocument: FileDocument {
                         ]
                     } ?? [],
                     "url": plistObject["baseURL"] as? String ?? "",
-                    "body": (plistObject["usingHTTPBody"] as? Bool == true)
-                        ? "BODY TEXT" : "",
+                    "body": (plistObject["bodyString"] as? String ?? ""),
                     "follorRedirects": plistObject["followRedirect"] as? Bool
                         ?? true,
                     "parameterEncoding": "Form encoded",
