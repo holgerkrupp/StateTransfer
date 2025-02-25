@@ -39,6 +39,7 @@ struct KeychainManager {
         let query: [String: Any] = [
             kSecClass as String: kSecClassInternetPassword,
             kSecAttrServer as String: server,
+            kSecAttrService as String: server,
             kSecAttrAccount as String: credentials.username,
             kSecValueData as String: passwordData
         ]
@@ -55,7 +56,7 @@ struct KeychainManager {
     static func getCredentials(for server: String) -> Authentication? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassInternetPassword,
-            kSecAttrServer as String: server,
+            kSecAttrService as String: server,
             kSecReturnAttributes as String: true,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne

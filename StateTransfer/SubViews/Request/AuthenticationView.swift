@@ -11,7 +11,8 @@ struct AuthenticationView: View {
     let url: String
     
     var body: some View {
-        Form {
+        
+
             Toggle("Use Authorization", isOn: $credentials.active)
                 .onChange(of: credentials.active) { _, isActive in
                     if isActive {
@@ -20,16 +21,28 @@ struct AuthenticationView: View {
                         }
                     }
                 }
-            
-            TextField("Name", text: $credentials.username)
-                .disabled(!credentials.active)
-            
-            SecureField("Password", text: $credentials.password)
-                .disabled(!credentials.active)
-        }
+  
+                
+        VStack(alignment: .leading) {
+            if credentials.active {
+                Form {
+                    HStack{
+                        TextField("Name", text: $credentials.username)
+                            .disabled(!credentials.active)
+                        
+                        SecureField("Password", text: $credentials.password)
+                            .disabled(!credentials.active)
+                    }}}}
+            .transition(.scale)
+            .animation(.easeInOut, value: credentials.active)
+
+
+        
         .onAppear {
-            if let storedCredentials = KeychainManager.getCredentials(for: url) {
-                credentials = storedCredentials
+            if credentials.active {
+                if let storedCredentials = KeychainManager.getCredentials(for: url) {
+                    credentials = storedCredentials
+                }
             }
         }
         /*

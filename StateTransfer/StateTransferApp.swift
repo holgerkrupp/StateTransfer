@@ -13,5 +13,10 @@ struct StateTransferApp: App {
         DocumentGroup(newDocument: HTTPRequestDocument()) { file in
             ContentView(document: file.$document)
         }
+        
+        Window("StateTransfer", id: "welcome") {
+                    AppLaunchView()
+                }
+        .defaultLaunchBehavior(.presented)
     }
 }

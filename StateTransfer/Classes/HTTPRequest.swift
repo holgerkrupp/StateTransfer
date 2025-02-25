@@ -92,7 +92,7 @@ struct HTTPRequest: Codable {
         }
         
     
-
+        if method != .get {
         
         if body.count > 0, let bodyData = body.data(using: bodyEncoding.encoding) {
             if request.httpBody == nil {
@@ -106,7 +106,7 @@ struct HTTPRequest: Codable {
             }
         }
 
-       
+        }
 
 
         return request

@@ -85,7 +85,7 @@ struct RequestHeaderView: View {
         HStack{
             Spacer()
             Button {
-                header.append(HeaderEntry(id: UUID(), active: false, key: "new", value: ""))
+                header.append(HeaderEntry(id: UUID(), active: false, key: "header", value: "value"))
             } label: {
                 Text("+")
             }

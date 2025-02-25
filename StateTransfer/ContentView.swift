@@ -24,6 +24,7 @@ struct ContentView: View {
                 RequestParamterView(header: $document.request.parameters, parameterEncoding: $document.request.parameterEncoding)
                 Divider()
                 RequestBodyView(message: $document.request.body, bodyEncoding: $document.request.bodyEncoding)
+                  //  .disabled(document.request.method == .get)
             }
             .padding()
             .frame(maxWidth: 500)
