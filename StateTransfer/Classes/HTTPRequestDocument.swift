@@ -36,12 +36,16 @@ struct HTTPRequestDocument: FileDocument {
 
         // Detect if the file is XML (Plist)
         if configuration.contentType == UTType(filenameExtension: "request") {
-            if let jsonData = convertPlistToJson(plistData: data) {
-                self.request = try JSONDecoder().decode(
-                    HTTPRequest.self, from: jsonData)
-            } else {
+            do {
+                if let jsonData = convertPlistToJson(plistData: data) {
+                    self.request = try JSONDecoder().decode(HTTPRequest.self, from: jsonData)
+                } else {
+                    self.request = try JSONDecoder().decode(HTTPRequest.self, from: data)
+                }
+            } catch {
                 throw CocoaError(.fileReadCorruptFile)
             }
+            
         } else {
             // Default to JSON parsing
             self.request = try JSONDecoder().decode(
