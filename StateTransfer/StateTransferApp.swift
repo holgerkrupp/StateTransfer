@@ -16,10 +16,9 @@ struct StateTransferApp: App {
         DocumentGroup(newDocument: HTTPRequestDocument()) { file in
           
            
-            ContentView(document: .constant(file.document)) // Pass as a constant (disconnected from file)
-                 
-           // ContentView(document: file.$document)
+            ContentView(document: file.$document) 
         }
+        .defaultSize(width: 1000, height: 800)
         
         .commands {
                    CommandGroup(replacing: .help) {

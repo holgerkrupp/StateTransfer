@@ -45,16 +45,7 @@ struct AuthenticationView: View {
                 }
             }
         }
-        /*
-         ONLY UPDATE KEYCHAIN WHEN REQUEST WORKS - THIS IS DONE IN HTTPREQUES.RUN
-        .onChange(of: credentials) { oldCredentials, newCredentials in
-            if !newCredentials.username.isEmpty, !newCredentials.password.isEmpty {
-                           KeychainManager.saveCredentials(newCredentials, server: url)
-                       }
-            
-            
-        }
-         */
+  
     }
 }
 
