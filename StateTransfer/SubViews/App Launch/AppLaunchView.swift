@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct AppLaunchView: View {
+    @StateObject private var recentManager = RecentDocumentsManager()
+
     var body: some View {
         HStack {
             Image("NetworkTerminal")
@@ -16,10 +18,13 @@ struct AppLaunchView: View {
            
               
                 RecentFilesView()
+                .environmentObject(recentManager)
             
         }
         OpenOrNewDocumentView()
+            .environmentObject(recentManager)
     }
+    
 }
 
 #Preview {

@@ -8,17 +8,20 @@
 import SwiftUI
 
 struct OpenOrNewDocumentView: View {
+    
+    @EnvironmentObject var recentManager: RecentDocumentsManager
+
     var body: some View {
         HStack {
             Spacer()
             
-            Button(action: openOtherFile) {
+            Button(action: recentManager.openOtherFile) {
                 Label("Open Other...", systemImage: "folder")
             }
             .buttonStyle(.bordered)
             .padding()
             Spacer()
-            Button(action: newDocument) {
+            Button(action: recentManager.newDocument) {
                 Label("New Request", systemImage: "doc.badge.plus")
             }
             .buttonStyle(.borderedProminent)
@@ -27,21 +30,6 @@ struct OpenOrNewDocumentView: View {
         }
     }
     
-    func newDocument() {
-        NSDocumentController.shared.newDocument(nil)
-    }
-    
-    func openOtherFile() {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-        
-        
-        if panel.runModal() == .OK, let selectedURL = panel.url {
-            NSDocumentController.shared.openDocument(withContentsOf: selectedURL, display: true) { _, _, _ in }
-        }
-    }
 }
 
 #Preview {

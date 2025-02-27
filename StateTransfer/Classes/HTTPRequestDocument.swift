@@ -9,13 +9,22 @@ import UniformTypeIdentifiers
 
 struct HTTPRequestDocument: FileDocument {
     static var readableContentTypes: [UTType] {
-        [.json, .propertyList, UTType(filenameExtension: "request")!,UTType(filenameExtension: "httprequest")!]
+        [UTType(filenameExtension: "httprequest") ?? .json, UTType(filenameExtension: "request")!]
+    }
+    static var writableContentTypes: [UTType] {
+        [UTType(filenameExtension: "httprequest") ?? .json]
     }
 
     var request: HTTPRequest
+    var isImported: Bool = false // Track if it's an imported file
+
 
     init(request: HTTPRequest = HTTPRequest()) {
         self.request = request
+    }
+    init(copying document: HTTPRequestDocument) {
+        self.request = document.request
+        self.isImported = true // Ensure it's treated as an imported file
     }
 
     init(configuration: ReadConfiguration) throws {
@@ -37,6 +46,10 @@ struct HTTPRequestDocument: FileDocument {
             // Default to JSON parsing
             self.request = try JSONDecoder().decode(
                 HTTPRequest.self, from: data)
+        }
+        
+        if configuration.contentType == UTType(filenameExtension: "request") {
+            self.isImported = true
         }
     }
 

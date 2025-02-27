@@ -6,10 +6,13 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     
     @Binding var document: HTTPRequestDocument
+    @State private var showSaveDialog = false
+
     var body: some View {
         HSplitView {
             VStack{
@@ -39,6 +42,21 @@ struct ContentView: View {
         }
         StatusBarView(request: $document.request)
             .padding([.leading, .bottom])
+            .onAppear {
+                // If this document was imported, trigger "Save As"
+                if document.isImported {
+                    document.isImported = false  // Reset flag
+                    showSaveDialog = true
+                }
+            }
+            .fileExporter(
+                isPresented: $showSaveDialog,
+                document: document,
+                contentType: UTType(filenameExtension: "httprequest")!,
+                defaultFilename: "RESTed Import"
+            ) { result in
+                // Handle save result if needed
+            }
             
         
     }

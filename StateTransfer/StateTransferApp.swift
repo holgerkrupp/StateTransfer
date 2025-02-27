@@ -9,13 +9,18 @@ import SwiftUI
 
 @main
 struct StateTransferApp: App {
-    
+
     var windowRef: NSWindow?
     
     var body: some Scene {
         DocumentGroup(newDocument: HTTPRequestDocument()) { file in
-            ContentView(document: file.$document)
+          
+           
+            ContentView(document: .constant(file.document)) // Pass as a constant (disconnected from file)
+                 
+           // ContentView(document: file.$document)
         }
+        
         .commands {
                    CommandGroup(replacing: .help) {
                        Button("Help") {
@@ -33,6 +38,19 @@ struct StateTransferApp: App {
                     AppLaunchView()
                 }
         .defaultLaunchBehavior(.presented)
+        
+    }
+    
+    func copyifNeeded(file: FileDocumentConfiguration<HTTPRequestDocument>) -> HTTPRequestDocument {
+        var document: HTTPRequestDocument
+
+         if file.fileURL?.pathExtension == "request" {
+             document = HTTPRequestDocument(copying: file.document) // Create a copy only for .request files
+         } else {
+             document = file.document // Use the original document for normal files
+         }
+ 
+        return document
     }
     
     func openHelpWindow() {
