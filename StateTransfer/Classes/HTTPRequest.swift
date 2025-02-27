@@ -112,6 +112,37 @@ struct HTTPRequest: Codable {
         return request
     }
     
+    var curlCommand: String {
+        guard let request else { return  "" }
+        guard let url = request.url else { return "" }
+        
+    
+       
+       var components = ["curl"]
+       
+       // Add HTTP method
+       if let method = request.httpMethod, method != "GET" {
+           components.append("-X \(method)")
+       }
+       
+       // Add headers
+       if let headers = request.allHTTPHeaderFields {
+           for (key, value) in headers {
+               components.append("-H \"\(key): \(value)\"")
+           }
+       }
+       
+       // Add body
+       if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
+           components.append("-d '\(bodyString)'")
+       }
+       
+       // Add URL
+       components.append("\"\(url.absoluteString)\"")
+       
+       return components.joined(separator: " \\\n    ")
+    }
+    
     func basicAuthHeader(username: String, password: String) -> String {
         let credentials = "\(username):\(password)"
         guard let data = credentials.data(using: .utf8) else { return "" }

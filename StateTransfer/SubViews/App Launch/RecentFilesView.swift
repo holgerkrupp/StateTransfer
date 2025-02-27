@@ -13,8 +13,12 @@ struct RecentFilesView: View {
 
     var body: some View {
         VStack{
+            Text("Recents")
+                .font(.title)
+                .padding()
             List(recentDocs) { doc in
                 HStack {
+                    Image(nsImage: doc.fileIcon)
                     VStack(alignment: .leading) {
                         Text(doc.name)
                             .font(.headline)
@@ -61,6 +65,12 @@ struct RecentFilesView: View {
         let lastModified: Date?
         let isInICloud: Bool
         let isDownloaded: Bool
+        
+        var fileIcon: NSImage {
+           
+                return NSWorkspace.shared.icon(forFile: url.absoluteString)
+            
+        }
     }
     
 
@@ -76,7 +86,6 @@ struct RecentFilesView: View {
             let name = url.lastPathComponent
             let attributes = try? fileManager.attributesOfItem(atPath: url.path)
             let modifiedDate = attributes?[.modificationDate] as? Date
-            
             return RecentDocument(url: url, name: name, lastModified: modifiedDate, isInICloud: isInICloud, isDownloaded: isDownloaded)
         }
     }

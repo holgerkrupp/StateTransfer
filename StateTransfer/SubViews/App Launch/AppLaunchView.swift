@@ -13,7 +13,10 @@ struct AppLaunchView: View {
             Image("NetworkTerminal")
                 .resizable()
                 .scaledToFill()
-            RecentFilesView()
+           
+              
+                RecentFilesView()
+            
         }
         OpenOrNewDocumentView()
     }

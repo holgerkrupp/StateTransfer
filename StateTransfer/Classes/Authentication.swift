@@ -39,7 +39,6 @@ struct KeychainManager {
         let query: [String: Any] = [
             kSecClass as String: kSecClassInternetPassword,
             kSecAttrServer as String: server,
-            kSecAttrService as String: server,
             kSecAttrAccount as String: credentials.username,
             kSecValueData as String: passwordData
         ]
@@ -56,15 +55,15 @@ struct KeychainManager {
     static func getCredentials(for server: String) -> Authentication? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassInternetPassword,
-            kSecAttrService as String: server,
+            kSecAttrServer as String: server,
             kSecReturnAttributes as String: true,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
-        
+        dump(query)
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
-        
+        dump(status)
         guard status == errSecSuccess, let existingItem = item as? [String: Any],
               let username = existingItem[kSecAttrAccount as String] as? String,
               let passwordData = existingItem[kSecValueData as String] as? Data,

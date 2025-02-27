@@ -6,11 +6,19 @@
 	<array>
 		<dict>
 			<key>CFBundleTypeIconSystemGenerated</key>
-			<integer>0</integer>
+			<integer>1</integer>
+			<key>CFBundleTypeName</key>
+			<string>StateTransfer Request</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
-			<string>Default</string>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>de.holgerkrupp.statetransfer.request</string>
+			</array>
+			<key>NSDocumentClass</key>
+			<string>NSDocument</string>
 		</dict>
 	</array>
 	<key>NSAppTransportSecurity</key>
@@ -20,11 +28,69 @@
 	</dict>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
-		<dict/>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>StateTransfer Request</string>
+			<key>UTTypeIcons</key>
+			<dict>
+				<key>UTTypeIconBackgroundName</key>
+				<string>IconBackground</string>
+				<key>UTTypeIconBadgeName</key>
+				<string>IconForeground</string>
+				<key>UTTypeIconText</key>
+				<string>HTTPS</string>
+			</dict>
+			<key>UTTypeIdentifier</key>
+			<string>de.holgerkrupp.statetransfer.request</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>httprequest</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/json</string>
+				</array>
+			</dict>
+		</dict>
 	</array>
 	<key>UTImportedTypeDeclarations</key>
 	<array>
-		<dict/>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>StateTransfer Request</string>
+			<key>UTTypeIcons</key>
+			<dict>
+				<key>UTTypeIconBackgroundName</key>
+				<string>IconBackground</string>
+				<key>UTTypeIconBadgeName</key>
+				<string>IconForeground</string>
+				<key>UTTypeIconText</key>
+				<string>HTTPS</string>
+			</dict>
+			<key>UTTypeIdentifier</key>
+			<string>de.holgerkrupp.statetransfer.request</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>httprequest</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/json</string>
+				</array>
+			</dict>
+		</dict>
 	</array>
 </dict>
 </plist>

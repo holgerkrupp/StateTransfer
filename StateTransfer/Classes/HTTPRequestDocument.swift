@@ -9,7 +9,7 @@ import UniformTypeIdentifiers
 
 struct HTTPRequestDocument: FileDocument {
     static var readableContentTypes: [UTType] {
-        [.json, .propertyList, UTType(filenameExtension: "request")!]
+        [.json, .propertyList, UTType(filenameExtension: "request")!,UTType(filenameExtension: "httprequest")!]
     }
 
     var request: HTTPRequest
