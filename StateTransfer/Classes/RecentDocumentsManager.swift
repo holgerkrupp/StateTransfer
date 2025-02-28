@@ -32,6 +32,8 @@ class RecentDocumentsManager: ObservableObject {
         
         // Listen for when the app becomes active (good moment to refresh)
         NotificationCenter.default.addObserver(self, selector: #selector(updateRecentDocuments), name: NSApplication.didBecomeActiveNotification, object: nil)
+        
+        
     }
 
     @objc func updateRecentDocuments() {

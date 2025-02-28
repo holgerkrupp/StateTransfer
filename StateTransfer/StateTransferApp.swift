@@ -42,19 +42,7 @@ struct StateTransferApp: App {
         .defaultLaunchBehavior(.presented)
         
     }
-    
-    func copyifNeeded(file: FileDocumentConfiguration<HTTPRequestDocument>) -> HTTPRequestDocument {
-        var document: HTTPRequestDocument
 
-         if file.fileURL?.pathExtension == "request" {
-             document = HTTPRequestDocument(copying: file.document) // Create a copy only for .request files
-         } else {
-             document = file.document // Use the original document for normal files
-         }
- 
-        return document
-    }
-    
     func openHelpWindow() {
         
         guard windowRef == nil else { return }

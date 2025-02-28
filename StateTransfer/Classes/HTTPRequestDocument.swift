@@ -16,6 +16,7 @@ struct HTTPRequestDocument: FileDocument {
     }
 
     var request: HTTPRequest
+    
     var isImported: Bool = false // Track if it's an imported file
 
 
