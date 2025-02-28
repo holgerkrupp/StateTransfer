@@ -24,7 +24,7 @@ struct AuthenticationView: View {
   
                 
         VStack(alignment: .leading) {
-            if credentials.active {
+           
                 Form {
                     HStack{
                         TextField("Name", text: $credentials.username)
@@ -32,9 +32,9 @@ struct AuthenticationView: View {
                         
                         SecureField("Password", text: $credentials.password)
                             .disabled(!credentials.active)
-                    }}}}
-            .transition(.scale)
-            .animation(.easeInOut, value: credentials.active)
+                    }}
+                
+            }
 
 
         

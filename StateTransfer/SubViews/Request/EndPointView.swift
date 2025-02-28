@@ -26,7 +26,7 @@ struct EndPointView: View {
             })
             .frame(width: 100)
             }
-        .padding()
+       
     }
 }
 

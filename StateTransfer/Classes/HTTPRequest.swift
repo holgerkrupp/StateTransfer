@@ -142,6 +142,29 @@ struct HTTPRequest: Codable {
        
        return components.joined(separator: " \\\n    ")
     }
+    var swiftCode: String {
+        guard let request else { return  "" }
+        guard let url = request.url else { return "" }
+
+        var code = """
+        var request = URLRequest(url: URL(string: "\(url.absoluteString)")!)
+        request.httpMethod = "\(request.httpMethod ?? "GET")"
+        """
+
+        // Add headers
+        if let headers = request.allHTTPHeaderFields, !headers.isEmpty {
+            for (key, value) in headers {
+                code += "\nrequest.setValue(\"\(value)\", forHTTPHeaderField: \"\(key)\")"
+            }
+        }
+
+        // Add body (if present)
+        if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
+            code += "\nrequest.httpBody = \"\(bodyString)\".data(using: .utf8)"
+        }
+
+        return code
+    }
     
     func basicAuthHeader(username: String, password: String) -> String {
         let credentials = "\(username):\(password)"

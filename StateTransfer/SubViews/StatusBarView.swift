@@ -13,6 +13,23 @@ struct StatusBarView: View {
     var body: some View {
         HStack {
             
+            
+           
+            /*
+            Button("Run in Terminal") {
+                runCurlCommand()
+            }
+            .padding()
+            */
+            Button("Copy curl command to Clipboard") {
+                copyCurlToClipboard()
+            }
+            .padding()
+            Button("Copy Swift code to Clipboard") {
+                copySwiftToClipboard()
+            }
+            .padding()
+            Spacer()
             Button {
                 Task{
                     await request.run()
@@ -20,17 +37,9 @@ struct StatusBarView: View {
             } label: {
                 Text("Send Request")
             }
-            Spacer()
-            /*
-            Button("Run in Terminal") {
-                runCurlCommand()
-            }
+            .buttonStyle(.borderedProminent)
             .padding()
-            */
-            Button("Copy to Clipboard") {
-                copyCurlToClipboard()
-            }
-            .padding()
+
         }
     }
     
@@ -66,5 +75,13 @@ struct StatusBarView: View {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(request.curlCommand, forType: .string)
+    }
+    
+    private func copySwiftToClipboard() {
+        guard !request.swiftCode.isEmpty else { return }
+        
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(request.swiftCode, forType: .string)
     }
 }
