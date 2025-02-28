@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct StatusBarView: View {
     @Binding var request: HTTPRequest
@@ -29,6 +30,11 @@ struct StatusBarView: View {
                 copySwiftToClipboard()
             }
             .padding()
+            Button("Export .http file") {
+                exportHttpFile()
+            }
+            .padding()
+            
             Spacer()
             Button {
                 Task{
@@ -66,6 +72,25 @@ struct StatusBarView: View {
             process.launchPath = "/usr/bin/osascript"
             process.arguments = ["-e", script]
             process.launch()
+        }
+    }
+    
+    private func exportHttpFile() {
+    
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [UTType(filenameExtension: "http") ?? .plainText]
+        savePanel.nameFieldStringValue = "request.http"
+        
+        savePanel.begin { response in
+            if response == .OK, let url = savePanel.url {
+                let correctedURL = url.pathExtension == "http" ? url : url.deletingPathExtension().appendingPathExtension("http")
+                
+                do {
+                    try request.httpFile.write(to: correctedURL, atomically: true, encoding: .utf8)
+                } catch {
+                    print("Error saving .http file: \(error)")
+                }
+            }
         }
     }
     

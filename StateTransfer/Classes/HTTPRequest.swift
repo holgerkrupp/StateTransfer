@@ -201,6 +201,28 @@ struct HTTPRequest: Codable {
 
         return code
     }
+    var httpFile: String {
+        guard let request else { return  "" }
+        guard let url = request.url else { return "" }
+
+        var httpContent = "\(request.httpMethod ?? "GET") \(url.absoluteString)"
+
+        // Add headers
+        if let headers = request.allHTTPHeaderFields, !headers.isEmpty {
+            for (key, value) in headers {
+                httpContent += "\n\(key): \(value)"
+            }
+        }
+
+        // Add body (if applicable)
+        if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
+            httpContent += "\n\n\(bodyString)"
+        }
+
+        return httpContent
+    }
+    
+
     
     func basicAuthHeader(username: String, password: String) -> String {
         let credentials = "\(username):\(password)"
@@ -266,8 +288,6 @@ struct HeaderEntry: Equatable, Identifiable, Codable {
     }
     
 }
-
-
 class RedirectHandler: NSObject, URLSessionTaskDelegate {
     func urlSession(_ session: URLSession,
                     task: URLSessionTask,
