@@ -12,6 +12,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		486B943D2D71B90400DAD9CD /* App Store.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "App Store.png"; sourceTree = "<group>"; };
+		486B943E2D71B90400DAD9CD /* App Store 2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "App Store 2.png"; sourceTree = "<group>"; };
 		486DF8FE2D666E570013F490 /* StateTransfer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StateTransfer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		486DF9712D68AD1C0013F490 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		486DF9722D68AD1C0013F490 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
@@ -60,9 +62,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		486B943C2D71B8D800DAD9CD /* Screenshots */ = {
+			isa = PBXGroup;
+			children = (
+				486B943D2D71B90400DAD9CD /* App Store.png */,
+				486B943E2D71B90400DAD9CD /* App Store 2.png */,
+			);
+			path = Screenshots;
+			sourceTree = "<group>";
+		};
 		486DF8F52D666E570013F490 = {
 			isa = PBXGroup;
 			children = (
+				486B943C2D71B8D800DAD9CD /* Screenshots */,
 				486DF9712D68AD1C0013F490 /* LICENSE */,
 				486DF9722D68AD1C0013F490 /* README.md */,
 				486DF9002D666E570013F490 /* StateTransfer */,
