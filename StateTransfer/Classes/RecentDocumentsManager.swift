@@ -57,6 +57,7 @@ class RecentDocumentsManager: ObservableObject {
             let modifiedDate = attributes?[.modificationDate] as? Date
             return RecentDocument(url: url, name: name, lastModified: modifiedDate, isInICloud: isInICloud, isDownloaded: isDownloaded)
         }
+       
     }
 
 

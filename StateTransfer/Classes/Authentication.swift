@@ -7,7 +7,7 @@
 import Security
 import Foundation
 
-struct Authentication: Equatable{
+struct Authentication: Equatable, Codable{
     var username: String = ""
     var password: String = ""
     var active: Bool = false
@@ -20,9 +20,18 @@ struct Authentication: Equatable{
                   lhs.type == rhs.type
        }
     
+    private enum CodingKeys: String, CodingKey {
+       case username
+        case password
+        case active
+        case type
+        
+        
+    }
+    
 }
 
-enum AuthenticationMethod{
+enum AuthenticationMethod: String, Codable{
     case basic
 }
 

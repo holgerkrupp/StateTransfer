@@ -16,8 +16,10 @@ struct AuthenticationView: View {
             Toggle("Use Authorization", isOn: $credentials.active)
                 .onChange(of: credentials.active) { _, isActive in
                     if isActive {
-                        if let storedCredentials = KeychainManager.getCredentials(for: url) {
-                            credentials = storedCredentials
+                        if credentials.username.isEmpty || credentials.password.isEmpty {
+                            if let storedCredentials = KeychainManager.getCredentials(for: url) {
+                                credentials = storedCredentials
+                            }
                         }
                     }
                 }
@@ -40,8 +42,10 @@ struct AuthenticationView: View {
         
         .onAppear {
             if credentials.active {
-                if let storedCredentials = KeychainManager.getCredentials(for: url) {
-                    credentials = storedCredentials
+                if credentials.username.isEmpty || credentials.password.isEmpty {
+                    if let storedCredentials = KeychainManager.getCredentials(for: url) {
+                        credentials = storedCredentials
+                    }
                 }
             }
         }

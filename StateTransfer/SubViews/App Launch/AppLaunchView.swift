@@ -20,10 +20,12 @@ struct AppLaunchView: View {
                         .resizable()
                         .scaledToFill()
                     
+                    VStack{
                     
-                    RecentFilesView()
-                        .environmentObject(recentManager)
-                    
+                        RecentFilesView()
+                            .environmentObject(recentManager)
+                        
+                    }
                 }
                 OpenOrNewDocumentView()
                     .environmentObject(recentManager)

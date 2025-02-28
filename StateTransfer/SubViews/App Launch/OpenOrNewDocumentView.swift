@@ -13,6 +13,9 @@ struct OpenOrNewDocumentView: View {
 
     var body: some View {
         HStack {
+            ExampleView()
+                .padding()
+                .frame(width: 150)
             Spacer()
             
             Button(action: recentManager.openOtherFile) {
@@ -26,12 +29,14 @@ struct OpenOrNewDocumentView: View {
             }
             .buttonStyle(.borderedProminent)
             .padding()
-            Spacer()
+           
         }
     }
     
 }
 
 #Preview {
+    @Previewable @StateObject var recentManager = RecentDocumentsManager()
     OpenOrNewDocumentView()
+        .environmentObject(recentManager)
 }

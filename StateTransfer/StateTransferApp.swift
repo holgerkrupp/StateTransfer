@@ -31,6 +31,9 @@ struct StateTransferApp: App {
                                            openAppStoreReviewPage()
                                        }
                    }
+            CommandGroup(after: .newItem) {  // Inserts after "New"
+                ExampleView()
+            }
                }
         
         Window("StateTransfer", id: "welcome") {

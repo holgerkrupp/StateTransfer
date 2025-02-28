@@ -33,6 +33,42 @@ struct HTTPRequest: Codable {
         case parameterEncoding
         case bodyEncoding
         case follorRedirects
+        case authorizationCredentials
+    }
+    
+    init(){}
+    
+    // Custom Decoder
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        url = try container.decodeIfPresent(URL.self, forKey: .url)
+        method = try container.decode(HTTPMethod.self, forKey: .method)
+        header = try container.decode([HeaderEntry].self, forKey: .header)
+        parameters = try container.decode([HeaderEntry].self, forKey: .parameters)
+        parameterEncoding = try container.decode(ParameterEncoding.self, forKey: .parameterEncoding)
+        body = try container.decode(String.self, forKey: .body)
+        bodyEncoding = try container.decode(BodyEncoding.self, forKey: .bodyEncoding)
+        follorRedirects = try container.decode(Bool.self, forKey: .follorRedirects)
+
+        // Decode authorizationCredentials but do NOT add it to CodingKeys
+   
+        let rawCredentials = try container.decodeIfPresent(Authentication.self, forKey: .authorizationCredentials)
+           authorizationCredentials = rawCredentials ?? Authentication()
+    }
+
+    // Custom Encoder
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(url, forKey: .url)
+        try container.encode(method, forKey: .method)
+        try container.encode(header, forKey: .header)
+        try container.encode(parameters, forKey: .parameters)
+        try container.encode(parameterEncoding, forKey: .parameterEncoding)
+        try container.encode(body, forKey: .body)
+        try container.encode(bodyEncoding, forKey: .bodyEncoding)
+        try container.encode(follorRedirects, forKey: .follorRedirects)
+        
+        // Do NOT encode authorizationCredentials
     }
     
     

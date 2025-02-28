@@ -1,0 +1,20 @@
+{
+    "method": "get",
+    "header": [
+
+    ],
+    "parameterEncoding": "Form encoded",
+    "parameters": [
+
+    ],
+    "body": "Enable Authorization and type 'user' & 'pass' as user and password  - ",
+    "url": "https://httpbin.org/basic-auth/user/pass",
+    "bodyEncoding": "UTF-8",
+    "follorRedirects": true,
+    "authorizationCredentials": {
+        "username": "user",
+        "password": "pass",
+        "active": true,
+        "type": "basic"
+    }
+}
