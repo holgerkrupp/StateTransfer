@@ -9,7 +9,7 @@ import Foundation
 
 
 
-struct HTTPRequest: Codable {
+struct HTTPRequest: Codable, Hashable {
     var id = UUID()
     var url: URL? = URL(string: "http://localhost:3000/")
     var method: HTTPMethod = .get
@@ -275,7 +275,7 @@ struct HTTPRequest: Codable {
 }
 
 
-struct HeaderEntry: Equatable, Identifiable, Codable {
+struct HeaderEntry: Equatable, Identifiable, Codable, Hashable {
     var id: UUID = UUID()
     var active: Bool
     var key: String

@@ -7,7 +7,7 @@
 import Security
 import Foundation
 
-struct Authentication: Equatable, Codable{
+struct Authentication: Equatable, Codable, Hashable{
     var username: String = ""
     var password: String = ""
     var active: Bool = false

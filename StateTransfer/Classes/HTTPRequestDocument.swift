@@ -7,7 +7,7 @@ import SwiftUI
 //
 import UniformTypeIdentifiers
 
-struct HTTPRequestDocument: FileDocument {
+class HTTPRequestDocument: FileDocument, ObservableObject {
     static var readableContentTypes: [UTType] {
         [UTType(filenameExtension: "httprequest") ?? .json, UTType(filenameExtension: "request")!]
     }
@@ -16,19 +16,24 @@ struct HTTPRequestDocument: FileDocument {
     }
 
     var request: HTTPRequest
+    @Published var requests: [HTTPRequest] = []
     
     var isImported: Bool = false // Track if it's an imported file
 
 
     init(request: HTTPRequest = HTTPRequest()) {
         self.request = request
+        requests.append(request)
     }
+    
     init(copying document: HTTPRequestDocument) {
         self.request = document.request
         self.isImported = true // Ensure it's treated as an imported file
+        
+        requests.append(request)
     }
 
-    init(configuration: ReadConfiguration) throws {
+    required init(configuration: ReadConfiguration) throws {
         guard let data = configuration.file.regularFileContents else {
             throw CocoaError(.fileReadCorruptFile)
         }
@@ -56,6 +61,13 @@ struct HTTPRequestDocument: FileDocument {
         if configuration.contentType == UTType(filenameExtension: "request") {
             self.isImported = true
         }
+        
+        requests.append(request)
+    }
+    
+     func addRequest(_ request: HTTPRequest?) {
+        print("addRequest")
+        requests.append(request ?? HTTPRequest())
     }
 
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
