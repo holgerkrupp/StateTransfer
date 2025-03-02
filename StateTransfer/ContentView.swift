@@ -21,25 +21,35 @@ struct ContentView: View {
        //  RequestView(request: $selectedRequest ?? $document.request)
 
         RequestsTabView(selectedRequestID: $selectedRequestID, document: document)
+            .onAppear {
+                if document.requests.isEmpty {
+                    document.requests.append(.init())
+              }
+            }
         Divider()
-        RequestView(request: $document.requests.first(where: { $0.id.wrappedValue == selectedRequestID }) ?? $document.request)
+        if let request = $document.requests.first(where: { $0.id.wrappedValue == selectedRequestID }) {
+            RequestView(request: request)
+                .onAppear {
+                    // If this document was imported, trigger "Save As"
+                    if document.isImported {
+                        document.isImported = false  // Reset flag
+                        showSaveDialog = true
+                    }
+                }
+                .fileExporter(
+                    isPresented: $showSaveDialog,
+                    document: document,
+                    contentType: UTType(filenameExtension: "httprequest")!,
+                    defaultFilename: "RESTed Import"
+                ) { result in
+                    // Handle save result if needed
+                }
+        }
+        
        
          
-            .onAppear {
-                // If this document was imported, trigger "Save As"
-                if document.isImported {
-                    document.isImported = false  // Reset flag
-                    showSaveDialog = true
-                }
-            }
-            .fileExporter(
-                isPresented: $showSaveDialog,
-                document: document,
-                contentType: UTType(filenameExtension: "httprequest")!,
-                defaultFilename: "RESTed Import"
-            ) { result in
-                // Handle save result if needed
-            }
+           
+
 
             
         

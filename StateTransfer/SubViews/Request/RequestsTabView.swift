@@ -29,12 +29,12 @@ struct RequestsTabView: View {
                     HStack {
                     ForEach($document.requests, id: \.self) { req in
                         Button(action: { selectedRequestID = req.id.wrappedValue }) {
-                            Text(req.wrappedValue.id.uuidString)
+                            Text(req.wrappedValue.name ?? "No Name")
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(selectedRequestID == req.id.wrappedValue ? Color.blue.opacity(0.2) : Color.clear)
                                 .cornerRadius(8)
-                                .frame(maxWidth: 50)
+                                .frame(maxWidth: 200)
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
