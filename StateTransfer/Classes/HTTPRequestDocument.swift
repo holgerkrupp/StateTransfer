@@ -15,36 +15,36 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
         [UTType(filenameExtension: "httprequest") ?? .json]
     }
 
-    var request: HTTPRequest
+    //var request: HTTPRequest
     @Published var requests: [HTTPRequest] = []
     
     var isImported: Bool = false // Track if it's an imported file
 
 
     init(request: HTTPRequest = HTTPRequest()) {
-        self.request = request
-        requests.append(request)
+        let temp = request
+        requests.append(temp)
     }
     
     init(copying document: HTTPRequestDocument) {
-        self.request = document.request
+      //  let temp = document.request
         self.isImported = true // Ensure it's treated as an imported file
         
-        requests.append(request)
+        requests = document.requests
     }
 
     required init(configuration: ReadConfiguration) throws {
+        print("configuration")
         guard let data = configuration.file.regularFileContents else {
             throw CocoaError(.fileReadCorruptFile)
         }
-
-        self.request = HTTPRequest()
-
+        
         // Detect if the file is XML (Plist)
         if configuration.contentType == UTType(filenameExtension: "request") {
             do {
                 if let jsonData = convertPlistToJson(plistData: data) {
-                    self.request = try JSONDecoder().decode(HTTPRequest.self, from: jsonData)
+                    let temp = try JSONDecoder().decode(HTTPRequest.self, from: jsonData)
+                    self.requests = [temp]
                 } else {
                     if let singleRequest = try? JSONDecoder().decode(HTTPRequest.self, from: data) {
                         self.requests = [singleRequest] // Wrap it in an array
@@ -72,7 +72,6 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
             self.isImported = true
         }
         
-        requests.append(request)
     }
     
      func addRequest(_ request: HTTPRequest?) {
