@@ -9,7 +9,7 @@ import SwiftUI
 
 struct RequestsTabView: View {
     
-    @State private var selectedRequestID: UUID?
+    @Binding var selectedRequestID: UUID?
     @ObservedObject  var document: HTTPRequestDocument
     var body: some View {
         HStack {
@@ -29,11 +29,12 @@ struct RequestsTabView: View {
                     HStack {
                     ForEach($document.requests, id: \.self) { req in
                         Button(action: { selectedRequestID = req.id.wrappedValue }) {
-                            Text("123")
+                            Text(req.wrappedValue.id.uuidString)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(selectedRequestID == req.id.wrappedValue ? Color.blue.opacity(0.2) : Color.clear)
                                 .cornerRadius(8)
+                                .frame(maxWidth: 50)
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
@@ -51,9 +52,12 @@ struct RequestsTabView: View {
                 selectedRequestID = $document.requests.first?.id.wrappedValue
             }
         }
+
+
     }
 }
 
 #Preview {
-    RequestsTabView(document: HTTPRequestDocument())
+    @Previewable @State var uuid: UUID? = UUID()
+    RequestsTabView(selectedRequestID: $uuid, document: HTTPRequestDocument())
 }

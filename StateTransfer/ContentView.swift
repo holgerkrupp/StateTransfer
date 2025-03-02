@@ -11,7 +11,7 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     
     @Binding var document: HTTPRequestDocument
-    
+    @State private var selectedRequestID: UUID?
 
     @State private var showSaveDialog = false
 
@@ -20,8 +20,9 @@ struct ContentView: View {
         
        //  RequestView(request: $selectedRequest ?? $document.request)
 
-        RequestsTabView(document: document)
-        RequestView(request: $document.request)
+        RequestsTabView(selectedRequestID: $selectedRequestID, document: document)
+        Divider()
+        RequestView(request: $document.requests.first(where: { $0.id.wrappedValue == selectedRequestID }) ?? $document.request)
        
          
             .onAppear {
@@ -39,6 +40,7 @@ struct ContentView: View {
             ) { result in
                 // Handle save result if needed
             }
+
             
         
     }

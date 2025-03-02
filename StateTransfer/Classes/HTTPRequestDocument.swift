@@ -46,7 +46,11 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
                 if let jsonData = convertPlistToJson(plistData: data) {
                     self.request = try JSONDecoder().decode(HTTPRequest.self, from: jsonData)
                 } else {
-                    self.request = try JSONDecoder().decode(HTTPRequest.self, from: data)
+                    if let singleRequest = try? JSONDecoder().decode(HTTPRequest.self, from: data) {
+                        self.requests = [singleRequest] // Wrap it in an array
+                    } else {
+                        self.requests = try JSONDecoder().decode([HTTPRequest].self, from: data)
+                    }
                 }
             } catch {
                 throw CocoaError(.fileReadCorruptFile)
@@ -54,8 +58,14 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
             
         } else {
             // Default to JSON parsing
-            self.request = try JSONDecoder().decode(
-                HTTPRequest.self, from: data)
+
+            
+            if let singleRequest = try? JSONDecoder().decode(HTTPRequest.self, from: data) {
+                self.requests = [singleRequest] // Wrap it in an array
+            } else {
+                self.requests = try JSONDecoder().decode([HTTPRequest].self, from: data)
+            }
+            
         }
         
         if configuration.contentType == UTType(filenameExtension: "request") {
@@ -71,7 +81,7 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     }
 
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        let data = try JSONEncoder().encode(request)
+        let data = try JSONEncoder().encode(requests)
         return FileWrapper(regularFileWithContents: data)
     }
 

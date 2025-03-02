@@ -11,6 +11,7 @@ import Foundation
 
 struct HTTPRequest: Codable, Hashable {
     var id = UUID()
+    var name: String?
     var url: URL? = URL(string: "http://localhost:3000/")
     var method: HTTPMethod = .get
     var header: [HeaderEntry] = []
@@ -26,6 +27,7 @@ struct HTTPRequest: Codable, Hashable {
     
     private enum CodingKeys: String, CodingKey {
         case url
+        case name
         case method
         case header
         case parameters
@@ -49,7 +51,7 @@ struct HTTPRequest: Codable, Hashable {
         body = try container.decode(String.self, forKey: .body)
         bodyEncoding = try container.decode(BodyEncoding.self, forKey: .bodyEncoding)
         follorRedirects = try container.decode(Bool.self, forKey: .follorRedirects)
-
+        name = try container.decodeIfPresent(String.self, forKey: .name)
         // Decode authorizationCredentials but do NOT add it to CodingKeys
    
         let rawCredentials = try container.decodeIfPresent(Authentication.self, forKey: .authorizationCredentials)
@@ -67,7 +69,7 @@ struct HTTPRequest: Codable, Hashable {
         try container.encode(body, forKey: .body)
         try container.encode(bodyEncoding, forKey: .bodyEncoding)
         try container.encode(follorRedirects, forKey: .follorRedirects)
-        
+        try container.encodeIfPresent(name, forKey: .name)
         // Do NOT encode authorizationCredentials
     }
     
