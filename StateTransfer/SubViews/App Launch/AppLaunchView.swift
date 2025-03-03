@@ -13,6 +13,7 @@ struct AppLaunchView: View {
     @State private var dragOver = false
 
     var body: some View {
+        
         ZStack {
             VStack{
                 HStack {

@@ -9,20 +9,22 @@ import Foundation
 
 
 
-struct HTTPRequest: Codable, Hashable {
-    var id = UUID()
-    var name: String = "unnamed"
-    var url: URL? = URL(string: "http://localhost:3000/")
-    var method: HTTPMethod = .get
-    var header: [HeaderEntry] = []
-    var parameters: [HeaderEntry] = []
-    var parameterEncoding: ParameterEncoding = .form
-    var body: String = ""
-    var bodyEncoding: BodyEncoding = .utf8
-
-    var follorRedirects: Bool = true
+class HTTPRequest: Codable {
+   
     
-    var authorizationCredentials: Authentication = Authentication()
+    var id = UUID()
+    @Published var name: String = "unnamed"
+    @Published var url: URL? = URL(string: "http://localhost:3000/")
+    @Published var method: HTTPMethod = .get
+    @Published var header: [HeaderEntry] = []
+    @Published var parameters: [HeaderEntry] = []
+    @Published var parameterEncoding: ParameterEncoding = .form
+    @Published var body: String = ""
+    @Published var bodyEncoding: BodyEncoding = .utf8
+
+    @Published var follorRedirects: Bool = true
+    
+    @Published var authorizationCredentials: Authentication = Authentication()
     
     
     private enum CodingKeys: String, CodingKey {
@@ -41,7 +43,7 @@ struct HTTPRequest: Codable, Hashable {
     init(){}
     
     // Custom Decoder
-    init(from decoder: Decoder) throws {
+    required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         url = try container.decodeIfPresent(URL.self, forKey: .url)
         method = try container.decode(HTTPMethod.self, forKey: .method)
@@ -248,12 +250,12 @@ struct HTTPRequest: Codable, Hashable {
             let endTime = DispatchTime.now()
             let elapsedTime = Double(endTime.uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
             DispatchQueue.main.async{
-                NotificationCenter.default.post(name: NSNotification.Name("HTTPResponse"), object: (id, data, response, elapsedTime), userInfo: (response as? HTTPURLResponse)?.allHeaderFields)
+                NotificationCenter.default.post(name: NSNotification.Name("HTTPResponse"), object: (self.id, data, response, elapsedTime), userInfo: (response as? HTTPURLResponse)?.allHeaderFields)
                 if (response as? HTTPURLResponse)?.statusCode == 200 {
                     if let server =  request.url?.host(),
-                       !authorizationCredentials.username.isEmpty,
-                       !authorizationCredentials.password.isEmpty {
-                        KeychainManager.saveCredentials(authorizationCredentials, server: server)
+                       !self.authorizationCredentials.username.isEmpty,
+                       !self.authorizationCredentials.password.isEmpty {
+                        KeychainManager.saveCredentials(self.authorizationCredentials, server: server)
                     }
                 } else {
                     print("Invalid credentials, not saving to Keychain.")
@@ -263,7 +265,7 @@ struct HTTPRequest: Codable, Hashable {
         }catch{
             print(error)
             DispatchQueue.main.async{
-                NotificationCenter.default.post(name: NSNotification.Name("HTTPError"), object: (id, error))
+                NotificationCenter.default.post(name: NSNotification.Name("HTTPError"), object: (self.id, error))
             }
         }
     }

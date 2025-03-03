@@ -34,7 +34,6 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     }
 
     required init(configuration: ReadConfiguration) throws {
-        print("configuration")
         guard let data = configuration.file.regularFileContents else {
             throw CocoaError(.fileReadCorruptFile)
         }
@@ -75,10 +74,16 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     }
     
      func addRequest(_ request: HTTPRequest?) {
-        print("addRequest")
         requests.append(request ?? HTTPRequest())
     }
 
+    func saveDocument() {
+            print("saveDocument")
+            objectWillChange.send()
+            NSApp.sendAction(#selector(NSDocument.save(_:)), to: nil, from: nil)
+
+    }
+    
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
         let data = try JSONEncoder().encode(requests)
         return FileWrapper(regularFileWithContents: data)
