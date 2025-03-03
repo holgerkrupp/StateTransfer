@@ -7,7 +7,7 @@
 import Security
 import Foundation
 
-struct Authentication: Equatable, Codable{
+struct Authentication: Equatable, Codable, Hashable{
     var username: String = ""
     var password: String = ""
     var active: Bool = false
@@ -41,7 +41,6 @@ struct KeychainManager {
     
     static func saveCredentials(_ credentials: Authentication, server: String) {
         
-        print("Trying to save credentials for \(server)")
         
         guard let passwordData = credentials.password.data(using: .utf8) else { return }
         
@@ -72,7 +71,6 @@ struct KeychainManager {
         dump(query)
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
-        dump(status)
         guard status == errSecSuccess, let existingItem = item as? [String: Any],
               let username = existingItem[kSecAttrAccount as String] as? String,
               let passwordData = existingItem[kSecValueData as String] as? Data,

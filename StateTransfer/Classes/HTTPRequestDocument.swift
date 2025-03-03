@@ -7,7 +7,7 @@ import SwiftUI
 //
 import UniformTypeIdentifiers
 
-struct HTTPRequestDocument: FileDocument {
+class HTTPRequestDocument: FileDocument, ObservableObject {
     static var readableContentTypes: [UTType] {
         [UTType(filenameExtension: "httprequest") ?? .json, UTType(filenameExtension: "request")!]
     }
@@ -15,33 +15,56 @@ struct HTTPRequestDocument: FileDocument {
         [UTType(filenameExtension: "httprequest") ?? .json]
     }
 
-    var request: HTTPRequest
+    //var request: HTTPRequest
+    @Published var requests: [HTTPRequest] = []{
+        didSet {
+            saveDocument()
+            attachObservers()
+        }
+    }
     
     var isImported: Bool = false // Track if it's an imported file
 
 
     init(request: HTTPRequest = HTTPRequest()) {
-        self.request = request
+        let temp = request
+        requests.append(temp)
+        attachObservers()
     }
+    
     init(copying document: HTTPRequestDocument) {
-        self.request = document.request
+      //  let temp = document.request
         self.isImported = true // Ensure it's treated as an imported file
+        
+        requests = document.requests
+        attachObservers()
+    }
+    
+    func attachObservers() {
+        for request in requests {
+            request.onChange = { [weak self] in
+                self?.saveDocument()
+            }
+        }
     }
 
-    init(configuration: ReadConfiguration) throws {
+    required init(configuration: ReadConfiguration) throws {
         guard let data = configuration.file.regularFileContents else {
             throw CocoaError(.fileReadCorruptFile)
         }
-
-        self.request = HTTPRequest()
-
+        
         // Detect if the file is XML (Plist)
         if configuration.contentType == UTType(filenameExtension: "request") {
             do {
                 if let jsonData = convertPlistToJson(plistData: data) {
-                    self.request = try JSONDecoder().decode(HTTPRequest.self, from: jsonData)
+                    let temp = try JSONDecoder().decode(HTTPRequest.self, from: jsonData)
+                    self.requests = [temp]
                 } else {
-                    self.request = try JSONDecoder().decode(HTTPRequest.self, from: data)
+                    if let singleRequest = try? JSONDecoder().decode(HTTPRequest.self, from: data) {
+                        self.requests = [singleRequest] // Wrap it in an array
+                    } else {
+                        self.requests = try JSONDecoder().decode([HTTPRequest].self, from: data)
+                    }
                 }
             } catch {
                 throw CocoaError(.fileReadCorruptFile)
@@ -49,17 +72,38 @@ struct HTTPRequestDocument: FileDocument {
             
         } else {
             // Default to JSON parsing
-            self.request = try JSONDecoder().decode(
-                HTTPRequest.self, from: data)
+
+            
+            if let singleRequest = try? JSONDecoder().decode(HTTPRequest.self, from: data) {
+                self.requests = [singleRequest] // Wrap it in an array
+            } else {
+                self.requests = try JSONDecoder().decode([HTTPRequest].self, from: data)
+            }
+            
         }
         
         if configuration.contentType == UTType(filenameExtension: "request") {
             self.isImported = true
         }
+        attachObservers()
+        
+    }
+    
+     func addRequest(_ request: HTTPRequest?) {
+        requests.append(request ?? HTTPRequest())
     }
 
+    func saveDocument() {
+            print("saveDocument")
+            objectWillChange.send()
+        DispatchQueue.main.async {
+            NSApp.sendAction(#selector(NSDocument.save(_:)), to: nil, from: nil)
+        }
+
+    }
+    
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        let data = try JSONEncoder().encode(request)
+        let data = try JSONEncoder().encode(requests)
         return FileWrapper(regularFileWithContents: data)
     }
 

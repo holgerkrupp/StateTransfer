@@ -9,23 +9,36 @@ import Foundation
 
 
 
-struct HTTPRequest: Codable {
-    var id = UUID()
-    var url: URL? = URL(string: "http://localhost:3000/")
-    var method: HTTPMethod = .get
-    var header: [HeaderEntry] = []
-    var parameters: [HeaderEntry] = []
-    var parameterEncoding: ParameterEncoding = .form
-    var body: String = ""
-    var bodyEncoding: BodyEncoding = .utf8
-
-    var follorRedirects: Bool = true
+class HTTPRequest: Codable, ObservableObject, Equatable {
+    static func == (lhs: HTTPRequest, rhs: HTTPRequest) -> Bool {
+        lhs.id == rhs.id
+    }
     
-    var authorizationCredentials: Authentication = Authentication()
+   
+    
+    @Published var id = UUID()
+    @Published var name: String = "unnamed" { didSet { notifyChange() } }
+    @Published var url: URL? = URL(string: "http://localhost:3000/") { didSet { notifyChange() } }
+    @Published var method: HTTPMethod = .get { didSet { notifyChange() } }
+    @Published var header: [HeaderEntry] = [] { didSet { notifyChange() } }
+    @Published var parameters: [HeaderEntry] = [] { didSet { notifyChange() } }
+    @Published var parameterEncoding: ParameterEncoding = .form { didSet { notifyChange() } }
+    @Published var body: String = "" { didSet { notifyChange() } }
+    @Published var bodyEncoding: BodyEncoding = .utf8 { didSet { notifyChange() } }
+    @Published var follorRedirects: Bool = true { didSet { notifyChange() } }
+    @Published var authorizationCredentials: Authentication = Authentication() { didSet { notifyChange() } }
+
+    private func notifyChange() {
+           objectWillChange.send() // Notify SwiftUI about property change
+           onChange?() // Trigger document save
+       }
+
+       var onChange: (() -> Void)? 
     
     
     private enum CodingKeys: String, CodingKey {
         case url
+        case name
         case method
         case header
         case parameters
@@ -39,7 +52,7 @@ struct HTTPRequest: Codable {
     init(){}
     
     // Custom Decoder
-    init(from decoder: Decoder) throws {
+    required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         url = try container.decodeIfPresent(URL.self, forKey: .url)
         method = try container.decode(HTTPMethod.self, forKey: .method)
@@ -49,7 +62,7 @@ struct HTTPRequest: Codable {
         body = try container.decode(String.self, forKey: .body)
         bodyEncoding = try container.decode(BodyEncoding.self, forKey: .bodyEncoding)
         follorRedirects = try container.decode(Bool.self, forKey: .follorRedirects)
-
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "unnamed"
         // Decode authorizationCredentials but do NOT add it to CodingKeys
    
         let rawCredentials = try container.decodeIfPresent(Authentication.self, forKey: .authorizationCredentials)
@@ -67,7 +80,7 @@ struct HTTPRequest: Codable {
         try container.encode(body, forKey: .body)
         try container.encode(bodyEncoding, forKey: .bodyEncoding)
         try container.encode(follorRedirects, forKey: .follorRedirects)
-        
+        try container.encode(name, forKey: .name)
         // Do NOT encode authorizationCredentials
     }
     
@@ -246,12 +259,12 @@ struct HTTPRequest: Codable {
             let endTime = DispatchTime.now()
             let elapsedTime = Double(endTime.uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
             DispatchQueue.main.async{
-                NotificationCenter.default.post(name: NSNotification.Name("HTTPResponse"), object: (id, data, response, elapsedTime), userInfo: (response as? HTTPURLResponse)?.allHeaderFields)
+                NotificationCenter.default.post(name: NSNotification.Name("HTTPResponse"), object: (self.id, data, response, elapsedTime), userInfo: (response as? HTTPURLResponse)?.allHeaderFields)
                 if (response as? HTTPURLResponse)?.statusCode == 200 {
                     if let server =  request.url?.host(),
-                       !authorizationCredentials.username.isEmpty,
-                       !authorizationCredentials.password.isEmpty {
-                        KeychainManager.saveCredentials(authorizationCredentials, server: server)
+                       !self.authorizationCredentials.username.isEmpty,
+                       !self.authorizationCredentials.password.isEmpty {
+                        KeychainManager.saveCredentials(self.authorizationCredentials, server: server)
                     }
                 } else {
                     print("Invalid credentials, not saving to Keychain.")
@@ -261,7 +274,7 @@ struct HTTPRequest: Codable {
         }catch{
             print(error)
             DispatchQueue.main.async{
-                NotificationCenter.default.post(name: NSNotification.Name("HTTPError"), object: (id, error))
+                NotificationCenter.default.post(name: NSNotification.Name("HTTPError"), object: (self.id, error))
             }
         }
     }
@@ -275,7 +288,7 @@ struct HTTPRequest: Codable {
 }
 
 
-struct HeaderEntry: Equatable, Identifiable, Codable {
+struct HeaderEntry: Equatable, Identifiable, Codable, Hashable {
     var id: UUID = UUID()
     var active: Bool
     var key: String

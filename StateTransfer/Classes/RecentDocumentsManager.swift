@@ -66,6 +66,7 @@ class RecentDocumentsManager: ObservableObject {
     func newDocument() {
         NSDocumentController.shared.newDocument(nil)
         
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             self.loadRecentDocuments()
         }
