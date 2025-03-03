@@ -9,7 +9,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct StatusBarView: View {
-    @Binding var request: HTTPRequest
+    @State var request: HTTPRequest
     
     var body: some View {
         HStack {

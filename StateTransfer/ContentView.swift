@@ -15,6 +15,7 @@ struct ContentView: View {
 
     @State private var showSaveDialog = false
     
+ 
     
 
     var body: some View {
@@ -31,7 +32,13 @@ struct ContentView: View {
               }
             }
         Divider()
-        if let request = $document.requests.first(where: { $0.id.wrappedValue == selectedRequestID }) {
+        /*
+        if let index = document.requests.firstIndex(where: { $0.id == selectedRequestID }) {
+            RequestView(request: document.requests[index])
+        }
+       */
+        if let request = document.requests.first(where: { $0.id == selectedRequestID }) {
+            
             RequestView(request: request)
                 .onAppear {
                     // If this document was imported, trigger "Save As"
@@ -48,6 +55,7 @@ struct ContentView: View {
                 ) { result in
                     // Handle save result if needed
                 }
+                
             
         }
        

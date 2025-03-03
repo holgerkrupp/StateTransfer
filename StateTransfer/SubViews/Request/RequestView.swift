@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct RequestView: View {
-    @Binding var request: HTTPRequest
+    @ObservedObject var request: HTTPRequest
     
     var body: some View {
         HSplitView {
@@ -36,7 +36,7 @@ struct RequestView: View {
             .frame(minWidth: 200)
             .padding()
         }
-        StatusBarView(request: $request)
+        StatusBarView(request: request)
             .padding([.leading, .bottom])
     }
 }
@@ -44,5 +44,5 @@ struct RequestView: View {
 #Preview {
     @Previewable @State var request: HTTPRequest = .init()
 
-    RequestView(request: $request)
+    RequestView(request: request)
 }

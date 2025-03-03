@@ -9,22 +9,31 @@ import Foundation
 
 
 
-class HTTPRequest: Codable {
+class HTTPRequest: Codable, ObservableObject, Equatable {
+    static func == (lhs: HTTPRequest, rhs: HTTPRequest) -> Bool {
+        lhs.id == rhs.id
+    }
+    
    
     
-    var id = UUID()
-    @Published var name: String = "unnamed"
-    @Published var url: URL? = URL(string: "http://localhost:3000/")
-    @Published var method: HTTPMethod = .get
-    @Published var header: [HeaderEntry] = []
-    @Published var parameters: [HeaderEntry] = []
-    @Published var parameterEncoding: ParameterEncoding = .form
-    @Published var body: String = ""
-    @Published var bodyEncoding: BodyEncoding = .utf8
+    @Published var id = UUID()
+    @Published var name: String = "unnamed" { didSet { notifyChange() } }
+    @Published var url: URL? = URL(string: "http://localhost:3000/") { didSet { notifyChange() } }
+    @Published var method: HTTPMethod = .get { didSet { notifyChange() } }
+    @Published var header: [HeaderEntry] = [] { didSet { notifyChange() } }
+    @Published var parameters: [HeaderEntry] = [] { didSet { notifyChange() } }
+    @Published var parameterEncoding: ParameterEncoding = .form { didSet { notifyChange() } }
+    @Published var body: String = "" { didSet { notifyChange() } }
+    @Published var bodyEncoding: BodyEncoding = .utf8 { didSet { notifyChange() } }
+    @Published var follorRedirects: Bool = true { didSet { notifyChange() } }
+    @Published var authorizationCredentials: Authentication = Authentication() { didSet { notifyChange() } }
 
-    @Published var follorRedirects: Bool = true
-    
-    @Published var authorizationCredentials: Authentication = Authentication()
+    private func notifyChange() {
+           objectWillChange.send() // Notify SwiftUI about property change
+           onChange?() // Trigger document save
+       }
+
+       var onChange: (() -> Void)? 
     
     
     private enum CodingKeys: String, CodingKey {

@@ -16,7 +16,12 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     }
 
     //var request: HTTPRequest
-    @Published var requests: [HTTPRequest] = []
+    @Published var requests: [HTTPRequest] = []{
+        didSet {
+            saveDocument()
+            attachObservers()
+        }
+    }
     
     var isImported: Bool = false // Track if it's an imported file
 
@@ -24,6 +29,7 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     init(request: HTTPRequest = HTTPRequest()) {
         let temp = request
         requests.append(temp)
+        attachObservers()
     }
     
     init(copying document: HTTPRequestDocument) {
@@ -31,6 +37,15 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
         self.isImported = true // Ensure it's treated as an imported file
         
         requests = document.requests
+        attachObservers()
+    }
+    
+    func attachObservers() {
+        for request in requests {
+            request.onChange = { [weak self] in
+                self?.saveDocument()
+            }
+        }
     }
 
     required init(configuration: ReadConfiguration) throws {
@@ -70,6 +85,7 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
         if configuration.contentType == UTType(filenameExtension: "request") {
             self.isImported = true
         }
+        attachObservers()
         
     }
     
@@ -80,7 +96,9 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     func saveDocument() {
             print("saveDocument")
             objectWillChange.send()
+        DispatchQueue.main.async {
             NSApp.sendAction(#selector(NSDocument.save(_:)), to: nil, from: nil)
+        }
 
     }
     
