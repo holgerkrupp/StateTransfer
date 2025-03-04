@@ -14,7 +14,10 @@ struct ContentView: View {
     @State private var selectedRequestID: UUID?
 
     @State private var showSaveDialog = false
-    
+    @State private var showExportDialog = false
+
+    @State private var showUnsavedChangesAlert = false
+
  
     
 
@@ -31,6 +34,7 @@ struct ContentView: View {
                     document.requests.append(.init())
               }
             }
+        
         Divider()
         /*
         if let index = document.requests.firstIndex(where: { $0.id == selectedRequestID }) {
@@ -44,11 +48,22 @@ struct ContentView: View {
                     // If this document was imported, trigger "Save As"
                     if document.isImported {
                         document.isImported = false  // Reset flag
-                        showSaveDialog = true
+                        showExportDialog = true
                     }
                 }
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+                    if !document.autoSaveEnabled && document.isDirty {
+                        showUnsavedChangesAlert = true
+                    }
+                }
+                .alert("Unsaved Changes", isPresented: $showUnsavedChangesAlert) {
+                    Button("Save", action: document.saveDocument)
+                    Button("Discard", role: .destructive) { }
+                } message: {
+                    Text("You have unsaved changes. Do you want to save before closing?")
+                }
                 .fileExporter(
-                    isPresented: $showSaveDialog,
+                    isPresented: $showExportDialog,
                     document: document,
                     contentType: UTType(filenameExtension: "httprequest")!,
                     defaultFilename: "RESTed Import"

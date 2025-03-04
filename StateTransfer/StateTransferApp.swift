@@ -11,7 +11,6 @@ import SwiftUI
 struct StateTransferApp: App {
 
     var windowRef: NSWindow?
-    
     var body: some Scene {
         DocumentGroup(newDocument: HTTPRequestDocument()) { file in
           
@@ -34,6 +33,7 @@ struct StateTransferApp: App {
             CommandGroup(after: .newItem) {  // Inserts after "New"
                 ExampleView()
             }
+           
                }
         
         Window("StateTransfer", id: "welcome") {
@@ -42,6 +42,8 @@ struct StateTransferApp: App {
         .defaultLaunchBehavior(.presented)
         
     }
+    
+
 
     func openHelpWindow() {
         

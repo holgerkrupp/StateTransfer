@@ -18,12 +18,14 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     //var request: HTTPRequest
     @Published var requests: [HTTPRequest] = []{
         didSet {
-            saveDocument()
-            attachObservers()
+            markDirty()
+            
         }
     }
     
     var isImported: Bool = false // Track if it's an imported file
+    @Published var isDirty = false
+    @Published var autoSaveEnabled = true // User setting for auto-save
 
 
     init(request: HTTPRequest = HTTPRequest()) {
@@ -41,12 +43,20 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     }
     
     func attachObservers() {
-        for request in requests {
-            request.onChange = { [weak self] in
-                self?.saveDocument()
-            }
-        }
-    }
+         for request in requests {
+             request.onChange = { [weak self] in
+                 self?.markDirty()
+             }
+         }
+     }
+
+     private func markDirty() {
+         if autoSaveEnabled {
+             saveDocument()
+         } else {
+             isDirty = true
+         }
+     }
 
     required init(configuration: ReadConfiguration) throws {
         guard let data = configuration.file.regularFileContents else {
@@ -96,6 +106,7 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     func saveDocument() {
             print("saveDocument")
             objectWillChange.send()
+        isDirty = false
         DispatchQueue.main.async {
             NSApp.sendAction(#selector(NSDocument.save(_:)), to: nil, from: nil)
         }

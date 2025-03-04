@@ -31,8 +31,9 @@ struct RequestsTabView: View {
                                             document: document,
                                             onClose: { closeRequest(req.wrappedValue) } // Pass close handler
                                         )
-                        .background(selectedRequestID == req.id.wrappedValue ? AnyShapeStyle(.tint) : AnyShapeStyle(Color.clear))
-                        
+                    .contentShape(Rectangle())
+                    .background(selectedRequestID == req.id.wrappedValue ? AnyShapeStyle(.tint) : AnyShapeStyle(Color.clear))
+                    
                         .cornerRadius(8)
                         .onTapGesture {
                             if selectedRequestID != req.id.wrappedValue {
@@ -54,11 +55,15 @@ struct RequestsTabView: View {
     private func closeRequest(_ request: HTTPRequest) {
         if let index = document.requests.firstIndex(where: { $0.id == request.id }) {
             document.requests.remove(at: index)
-
+            if document.requests.isEmpty {
+                document.addRequest(nil)
+                
+            }
             // If the deleted tab was selected, pick another
             if selectedRequestID == request.id {
                 selectedRequestID = document.requests.first?.id // Select next available tab
             }
+
             document.saveDocument() // Auto-save when renaming
 
         }
@@ -75,6 +80,7 @@ struct TabItemView: View {
 
     var body: some View {
         HStack {
+            Spacer()
             if isEditing {
                 TextField("", text: $tempName, onCommit: {
                     if !tempName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -91,9 +97,10 @@ struct TabItemView: View {
                     .onTapGesture(count: 2) { isEditing = true }
                     .foregroundColor(selectedRequestID == request.id ? Color.white : Color.primary)
             }
+            Spacer()
             Button(action: onClose) {
                             Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.gray)
+                            .foregroundColor(selectedRequestID == request.id ? Color.white : Color.primary)
                                 .opacity(0.7)
                         }
                         .buttonStyle(.plain)
