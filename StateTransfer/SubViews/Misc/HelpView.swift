@@ -30,8 +30,17 @@ struct HelpView: View {
                 .padding(.horizontal)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer()
+            VStack{
+                Text("StateTransfer uses following open source package:")
+                Link("Highlightr", destination: URL(string: "https://github.com/raspu/Highlightr")!)
+                    .font(.body)
+                    .foregroundColor(.blue)
+                    
             }
-            .frame(width: 400, height: 200)
+          
+            
+            }
+            .frame(width: 400, height: 300)
             .padding()
     }
 }

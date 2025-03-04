@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		486DF9732D68AD1C0013F490 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 486DF9712D68AD1C0013F490 /* LICENSE */; };
 		486DF9742D68AD1C0013F490 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 486DF9722D68AD1C0013F490 /* README.md */; };
+		48A619BB2D76EF4D002B27D2 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 48A619BA2D76EF4D002B27D2 /* Highlightr */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				48A619BB2D76EF4D002B27D2 /* Highlightr in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -110,6 +112,7 @@
 			);
 			name = StateTransfer;
 			packageProductDependencies = (
+				48A619BA2D76EF4D002B27D2 /* Highlightr */,
 			);
 			productName = StateTransfer;
 			productReference = 486DF8FE2D666E570013F490 /* StateTransfer.app */;
@@ -139,6 +142,9 @@
 			);
 			mainGroup = 486DF8F52D666E570013F490;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				48A619B92D76EF4D002B27D2 /* XCRemoteSwiftPackageReference "Highlightr" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 486DF8FF2D666E570013F490 /* Products */;
 			projectDirPath = "";
@@ -374,6 +380,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		48A619B92D76EF4D002B27D2 /* XCRemoteSwiftPackageReference "Highlightr" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/raspu/Highlightr";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.2.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		48A619BA2D76EF4D002B27D2 /* Highlightr */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 48A619B92D76EF4D002B27D2 /* XCRemoteSwiftPackageReference "Highlightr" */;
+			productName = Highlightr;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 486DF8F62D666E570013F490 /* Project object */;
 }

@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 import Foundation
+import Highlightr
 
 
 struct ResponseView: View {
@@ -82,6 +83,21 @@ struct ResponseView: View {
         case .hex:
             return hexRepresentation
         }
+    }
+    
+    private var highlightedText: NSAttributedString {
+        let highlightr = Highlightr()!
+        highlightr.setTheme(to: "atom-one-dark") // Choose a theme
+
+        let language: String
+        switch displayOption {
+        case .json: language = "json"
+        case .xml: language = "xml"
+        case .text: language = "plaintext"
+        case .hex: language = "plaintext"
+        }
+
+        return highlightr.highlight(displayRepresentation, as: language) ?? NSAttributedString(string: displayRepresentation)
     }
     private var colorForStatusCode: Color {
         switch statusCode {
@@ -188,16 +204,9 @@ struct ResponseView: View {
                         .frame(width: 100)
                     }
                     ScrollView {
-                        Text(displayRepresentation)
-                        
-                            .monospaced()
-                            .lineLimit(nil)
-                            .frame(
-                                maxWidth: .infinity,
-                                minHeight: 200,
-                                alignment: .leading
-                            )
-                            .background(.thinMaterial)
+                        Text(AttributedString(highlightedText))
+                            .frame(maxWidth: .infinity, minHeight: 200, alignment: .leading)
+                            .background(Color.black) // Background for readability
                     }
                 case .image(_):
                     if let image{
@@ -262,34 +271,66 @@ struct ResponseView: View {
         
     }
     
-    private func loadHTTPResponse(
-        output: NotificationCenter.Publisher.Output
-    )  {
-        guard let (id, data, response, elapsedTime) = output.object as? (UUID, Data, HTTPURLResponse, Double), id == requestid else {
+    private func loadHTTPResponse(output: NotificationCenter.Publisher.Output) {
+        guard let (id, data, response, elapsedTime) = output.object as? (UUID, Data, HTTPURLResponse, Double),
+              id == requestid else {
             return
         }
+        
         statusCode = response.statusCode
-        messageEncoding = extractEncodingAndContentType(
-            from: response
-        ).0 ?? .utf8
-        contentType = extractEncodingAndContentType(
-            from: response
-        ).1 ?? ContentType.text(.plain)
+        let (encoding, type) = extractEncodingAndContentType(from: response)
+        messageEncoding = encoding ?? .utf8
+        contentType = type ?? ContentType.text(.plain)
+        
         switch contentType {
-        case .text:
+        case .text(let subtype):
             message = String(data: data, encoding: messageEncoding.encoding)
+            
+            switch subtype {
+            case .json:
+                if isValidJSON(data) {
+                    displayOption = .json
+                } else {
+                    displayOption = .text // Fallback to plain text if JSON is invalid
+                }
+                
+            case .xml:
+                if isValidXML(data) {
+                    displayOption = .xml
+                } else {
+                    displayOption = .text // Fallback to plain text if XML is invalid
+                }
+                
+            default:
+                displayOption = .text
+            }
+            
         case .image(_):
             if let nsImage = NSImage(data: data) {
                 image = Image(nsImage: nsImage)
             }
+            
         case .unknown(_):
             break
         }
+        
         header = transformHeaders(response.allHeaderFields)
         requestTime = elapsedTime
-        
-        
     }
+    
+    private func isValidJSON(_ data: Data) -> Bool {
+        return (try? JSONSerialization.jsonObject(with: data, options: [])) != nil
+    }
+
+    private func isValidXML(_ data: Data) -> Bool {
+        do {
+            _ = try XMLDocument(data: data, options: .documentTidyXML)
+            return true
+        } catch {
+            return false
+        }
+    }
+
     
     private func transformHeaders(_ allHeaderFields: [AnyHashable: Any]) -> [HeaderEntry] {
         let formatter = DateFormatter()
