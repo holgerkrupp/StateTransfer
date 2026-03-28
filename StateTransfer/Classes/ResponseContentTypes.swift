@@ -6,7 +6,7 @@
 //
 
 
-enum ContentType {
+enum ContentType: Equatable {
     case image(ImageContentType)
     case text(TextContentType)
     case unknown(String)
@@ -55,4 +55,3 @@ enum TextContentType: String {
         return TextContentType(rawValue: rawValue)
     }
 }
-

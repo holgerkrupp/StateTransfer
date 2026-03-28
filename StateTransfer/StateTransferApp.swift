@@ -10,7 +10,7 @@ import SwiftUI
 @main
 struct StateTransferApp: App {
 
-    var windowRef: NSWindow?
+    @State private var helpWindow: NSWindow?
     var body: some Scene {
         DocumentGroup(newDocument: HTTPRequestDocument()) { file in
           
@@ -46,21 +46,26 @@ struct StateTransferApp: App {
 
 
     func openHelpWindow() {
-        
-        guard windowRef == nil else { return }
-        
-          let windowRef = NSWindow(
-              contentRect: NSRect(x: 0, y: 0, width: 400, height: 250),
-              styleMask: [.titled, .closable, .resizable],
-              backing: .buffered,
-              defer: false
-          )
-        windowRef.center()
-        windowRef.setFrameAutosaveName("Help")
-        windowRef.contentView = NSHostingView(rootView: HelpView())
-        windowRef.isReleasedWhenClosed = false
+        if let helpWindow {
+            helpWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
 
-        windowRef.makeKeyAndOrderFront(nil)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 250),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.center()
+        window.setFrameAutosaveName("Help")
+        window.contentView = NSHostingView(rootView: HelpView())
+        window.isReleasedWhenClosed = false
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+
+        helpWindow = window
       }
     
     func openAppStoreReviewPage() {

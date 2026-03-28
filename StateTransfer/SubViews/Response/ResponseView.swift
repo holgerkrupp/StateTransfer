@@ -6,12 +6,12 @@
 //
 
 import SwiftUI
-import Combine
 import Foundation
 import Highlightr
 
 
 struct ResponseView: View {
+    @ObservedObject var request: HTTPRequest
     @State private var statusCode: Int = 0
     @State private var message: String?
     @State private var image: Image?
@@ -20,8 +20,6 @@ struct ResponseView: View {
     @State private var header: [HeaderEntry] = []
     @State private var displayOption: DisplayMode = .text
     @State private var requestTime: Double?
-    
-    @Binding var requestid: UUID
     
     private var textRepresentation: String {
         let Stringheader = "Field\tValue"
@@ -82,6 +80,25 @@ struct ResponseView: View {
             return prettyPrintedXML
         case .hex:
             return hexRepresentation
+        case .html:
+            return message ?? ""
+        }
+    }
+
+    private var availableDisplayModes: [DisplayMode] {
+        guard case let .text(subtype) = contentType else {
+            return []
+        }
+
+        switch subtype {
+        case .json:
+            return [.json, .text, .hex]
+        case .xml:
+            return [.xml, .text, .hex]
+        case .html:
+            return [.html, .text, .hex]
+        default:
+            return [.text, .hex]
         }
     }
     
@@ -95,6 +112,7 @@ struct ResponseView: View {
         case .xml: language = "xml"
         case .text: language = "plaintext"
         case .hex: language = "plaintext"
+        case .html: language = "html"
         }
 
         return highlightr.highlight(displayRepresentation, as: language) ?? NSAttributedString(string: displayRepresentation)
@@ -119,25 +137,23 @@ struct ResponseView: View {
         case json
         case xml
         case hex
+        case html
         
+        var title: String {
+            switch self {
+            case .html:
+                return "Preview"
+            default:
+                return rawValue.uppercased()
+            }
+        }
     }
-    
-    private let response = NotificationCenter.default
-        .publisher(for: NSNotification.Name("HTTPResponse"))
-    
-    private let error = NotificationCenter.default
-        .publisher(for: NSNotification.Name("HTTPError"))
     
     var body: some View {
         VStack {
             if statusCode != 0 {
                 HStack{
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(colorForStatusCode)
-                        .frame(width: 50, height: 30)
-                        .overlay{
-                            Text(statusCode.description)
-                        }
+                    statusCodeBadge
                     VStack{
                         Text(
                             "\(HTTPURLResponse.localizedString(forStatusCode: statusCode))"
@@ -197,16 +213,26 @@ struct ResponseView: View {
                         
                         Spacer()
                         Picker("", selection: $displayOption, content: {
-                            ForEach(DisplayMode.allCases, id: \.self) { display in
-                                Text(display.rawValue).tag(display)
+                            ForEach(availableDisplayModes, id: \.self) { display in
+                                Text(display.title).tag(display)
                             }
                         })
-                        .frame(width: 100)
+                        .frame(width: 220)
+                        .pickerStyle(.segmented)
                     }
-                    ScrollView {
-                        Text(AttributedString(highlightedText))
+                    if displayOption == .html {
+                        WebView(htmlString: message ?? "")
                             .frame(maxWidth: .infinity, minHeight: 200, alignment: .leading)
-                            .background(Color.black) // Background for readability
+                    } else {
+                        ScrollView {
+                            Text(AttributedString(highlightedText))
+                                .frame(maxWidth: .infinity, minHeight: 200, alignment: .leading)
+                                .padding()
+                        }
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(Color.black.opacity(0.92))
+                        )
                     }
                 case .image(_):
                     if let image{
@@ -240,14 +266,14 @@ struct ResponseView: View {
                     }
                 }
             
-            Spacer()
+            
         }
         .textSelection(.enabled)
-        .onReceive(response) { (output) in
-            self.loadHTTPResponse(output: output)
+        .onAppear {
+            applyStoredResponse(request.responseSnapshot)
         }
-        .onReceive(error) { (output) in
-            self.loadHTTPError(output: output)
+        .onChange(of: request.responseSnapshot) { _, snapshot in
+            applyStoredResponse(snapshot)
         }
     }
     
@@ -257,65 +283,61 @@ struct ResponseView: View {
         pasteboard.setString(value, forType: .string)
     }
     
-    private func loadHTTPError(output: NotificationCenter.Publisher.Output)  {
-        guard let (id, error) = output.object as? (UUID, Error), id == requestid else {
+    private func applyStoredResponse(_ snapshot: HTTPResponseSnapshot?) {
+        guard let snapshot else {
+            resetResponse()
             return
         }
-        
-        statusCode = 0
-        
-        message = error.localizedDescription
-        header = []
-        requestTime = 0
-        
-        
+
+        statusCode = snapshot.statusCode
+        messageEncoding = snapshot.messageEncoding
+        contentType = snapshot.contentType
+        message = snapshot.message
+        image = snapshot.imageData
+            .flatMap(NSImage.init(data:))
+            .map(Image.init(nsImage:))
+        header = snapshot.header
+        requestTime = snapshot.requestTime
+        displayOption = preferredDisplayMode(for: snapshot)
     }
-    
-    private func loadHTTPResponse(output: NotificationCenter.Publisher.Output) {
-        guard let (id, data, response, elapsedTime) = output.object as? (UUID, Data, HTTPURLResponse, Double),
-              id == requestid else {
-            return
-        }
-        
-        statusCode = response.statusCode
-        let (encoding, type) = extractEncodingAndContentType(from: response)
-        messageEncoding = encoding ?? .utf8
-        contentType = type ?? ContentType.text(.plain)
-        
-        switch contentType {
+
+    private func preferredDisplayMode(for snapshot: HTTPResponseSnapshot) -> DisplayMode {
+        switch snapshot.contentType {
         case .text(let subtype):
-            message = String(data: data, encoding: messageEncoding.encoding)
-            
             switch subtype {
             case .json:
-                if isValidJSON(data) {
-                    displayOption = .json
-                } else {
-                    displayOption = .text // Fallback to plain text if JSON is invalid
+                guard let data = snapshot.message?.data(using: snapshot.messageEncoding.encoding) else {
+                    return .text
                 }
-                
+                return isValidJSON(data) ? .json : .text
+
             case .xml:
-                if isValidXML(data) {
-                    displayOption = .xml
-                } else {
-                    displayOption = .text // Fallback to plain text if XML is invalid
+                guard let data = snapshot.message?.data(using: snapshot.messageEncoding.encoding) else {
+                    return .text
                 }
-                
+                return isValidXML(data) ? .xml : .text
+
+            case .html:
+                return .html
+
             default:
-                displayOption = .text
+                return .text
             }
-            
-        case .image(_):
-            if let nsImage = NSImage(data: data) {
-                image = Image(nsImage: nsImage)
-            }
-            
-        case .unknown(_):
-            break
+
+        case .image, .unknown:
+            return .text
         }
-        
-        header = transformHeaders(response.allHeaderFields)
-        requestTime = elapsedTime
+    }
+
+    private func resetResponse() {
+        statusCode = 0
+        message = nil
+        image = nil
+        messageEncoding = .utf8
+        contentType = .text(.plain)
+        header = []
+        displayOption = .text
+        requestTime = nil
     }
     
     private func isValidJSON(_ data: Data) -> Bool {
@@ -332,81 +354,27 @@ struct ResponseView: View {
     }
 
     
-    private func transformHeaders(_ allHeaderFields: [AnyHashable: Any]) -> [HeaderEntry] {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "E, d MMM yyyy HH:mm:ss Z" // Common HTTP date format
-        
-        return allHeaderFields.reduce(into: [HeaderEntry]()) {
- result,
-            entry in
-            guard let key = entry.key as? String else {
-                return
-            } // Ensure key is String
-            
-            let value: String
-            switch entry.value {
-            case let string as String:
-                value = string
-            case let int as Int:
-                value = String(int)
-            case let number as NSNumber:
-                value = number.stringValue
-            case let date as Date:
-                value = formatter.string(from: date)
-            default:
-                value = "\(entry.value)" // Fallback for unknown types
-            }
-            
-            result.append(HeaderEntry(active: false, key: key, value: value))
+}
+
+private extension ResponseView {
+    @ViewBuilder
+    var statusCodeBadge: some View {
+        let badgeLabel = Text(statusCode.description)
+            .font(.headline)
+            .frame(minWidth: 52, minHeight: 32)
+
+        if #available(macOS 26.0, *) {
+            badgeLabel
+                .glassEffect(.regular.tint(colorForStatusCode), in: Capsule())
+        } else {
+            badgeLabel
+                .background(colorForStatusCode, in: Capsule())
         }
     }
-    
-    func extractEncodingAndContentType(from response: URLResponse?) -> (
-        BodyEncoding?,
-        ContentType?
-    ) {
-        guard let httpResponse = response as? HTTPURLResponse else {
-            return (nil, nil)
-        }
-        
-        // Read "Content-Type" header
-        if let contentType = httpResponse.allHeaderFields["Content-Type"] as? String {
-            // Extract charset from Content-Type (e.g., "application/json; charset=utf-8")
-            let components = contentType.lowercased().components(
-                separatedBy: ";"
-            )
-            let mimeType = components.first?.trimmingCharacters(
-                in: .whitespaces
-            )
-            
-            let cType: ContentType? = .from(mimeType ?? "")
-            
-            var encoding: BodyEncoding?
-            if let charsetComponent = components.first(
-                where: { $0.contains("charset=")
-                }) {
-                let charset = charsetComponent.replacingOccurrences(of: "charset=", with: "").trimmingCharacters(
-                    in: .whitespaces
-                )
-                
-                // Match against your BodyEncoding enum
-                encoding = BodyEncoding.allCases
-                    .first { $0.value.contains(charset) }
-            }
-            
-            return (encoding, cType)
-        }
-        
-        return (nil, nil)
-    }
-    
-    
-    
-    
 }
 
 #Preview {
-    @Previewable @State var id: UUID = UUID()
+    let request = HTTPRequest()
     
-    ResponseView(requestid: $id)
+    ResponseView(request: request)
 }
