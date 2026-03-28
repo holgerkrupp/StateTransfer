@@ -9,43 +9,45 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct StatusBarView: View {
-    @State var request: HTTPRequest
+    @ObservedObject var request: HTTPRequest
     
     var body: some View {
         HStack {
-            
-            
-           
-            /*
-            Button("Run in Terminal") {
-                runCurlCommand()
-            }
-            .padding()
-            */
-            Button("Copy curl command to Clipboard") {
+            secondaryActionButton(
+                title: "Copy curl",
+                systemImage: "terminal"
+            ) {
                 copyCurlToClipboard()
             }
-            .padding()
-            Button("Copy Swift code to Clipboard") {
+            secondaryActionButton(
+                title: "Copy Swift",
+                systemImage: "swift"
+            ) {
                 copySwiftToClipboard()
             }
-            .padding()
-            Button("Export .http file") {
+            secondaryActionButton(
+                title: "Export .http",
+                systemImage: "square.and.arrow.up"
+            ) {
                 exportHttpFile()
             }
-            .padding()
-            
             Spacer()
-            Button {
+            primaryActionButton {
                 Task{
                     await request.run()
                 }
-            } label: {
-                Text("Send Request")
             }
-            .buttonStyle(.borderedProminent)
-            .padding()
-
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background {
+            if #available(macOS 26.0, *) {
+                Color.clear
+                    .glassEffect(.regular, in: Capsule())
+            } else {
+                Capsule()
+                    .fill(.thinMaterial)
+            }
         }
     }
     
@@ -108,5 +110,35 @@ struct StatusBarView: View {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(request.swiftCode, forType: .string)
+    }
+
+    @ViewBuilder
+    private func secondaryActionButton(
+        title: String,
+        systemImage: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        let button = Button(action: action) {
+            Label(title, systemImage: systemImage)
+        }
+
+        if #available(macOS 26.0, *) {
+            button.buttonStyle(.glass)
+        } else {
+            button.buttonStyle(.bordered)
+        }
+    }
+
+    @ViewBuilder
+    private func primaryActionButton(action: @escaping () -> Void) -> some View {
+        let button = Button(action: action) {
+            Label("Send Request", systemImage: "paperplane.fill")
+        }
+
+        if #available(macOS 26.0, *) {
+            button.buttonStyle(.glassProminent)
+        } else {
+            button.buttonStyle(.borderedProminent)
+        }
     }
 }

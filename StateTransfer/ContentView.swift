@@ -22,64 +22,46 @@ struct ContentView: View {
     
 
     var body: some View {
-        
-        
-       //  RequestView(request: $selectedRequest ?? $document.request)
-        
-        
-        
-        RequestsTabView(selectedRequestID: $selectedRequestID, document: document)
-            .onAppear {
-                if document.requests.isEmpty {
-                    document.requests.append(.init())
-              }
-            }
-        
-        Divider()
-        /*
-        if let index = document.requests.firstIndex(where: { $0.id == selectedRequestID }) {
-            RequestView(request: document.requests[index])
-        }
-       */
-        if let request = document.requests.first(where: { $0.id == selectedRequestID }) {
-            
-            RequestView(request: request)
+        VStack(spacing: 0) {
+            RequestsTabView(selectedRequestID: $selectedRequestID, document: document)
                 .onAppear {
-                    // If this document was imported, trigger "Save As"
-                    if document.isImported {
-                        document.isImported = false  // Reset flag
-                        showExportDialog = true
+                    if document.requests.isEmpty {
+                        let request = HTTPRequest()
+                        document.requests.append(request)
+                        selectedRequestID = request.id
                     }
                 }
-                .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
-                    if !document.autoSaveEnabled && document.isDirty {
-                        showUnsavedChangesAlert = true
+
+            Divider()
+
+            if let request = document.requests.first(where: { $0.id == selectedRequestID }) {
+                RequestView(request: request)
+                    .onAppear {
+                        if document.isImported {
+                            document.isImported = false
+                            showExportDialog = true
+                        }
                     }
-                }
-                .alert("Unsaved Changes", isPresented: $showUnsavedChangesAlert) {
-                    Button("Save", action: document.saveDocument)
-                    Button("Discard", role: .destructive) { }
-                } message: {
-                    Text("You have unsaved changes. Do you want to save before closing?")
-                }
-                .fileExporter(
-                    isPresented: $showExportDialog,
-                    document: document,
-                    contentType: UTType(filenameExtension: "httprequest")!,
-                    defaultFilename: "RESTed Import"
-                ) { result in
-                    // Handle save result if needed
-                }
-                
-            
+                    .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+                        if !document.autoSaveEnabled && document.isDirty {
+                            showUnsavedChangesAlert = true
+                        }
+                    }
+                    .alert("Unsaved Changes", isPresented: $showUnsavedChangesAlert) {
+                        Button("Save", action: document.saveDocument)
+                        Button("Discard", role: .destructive) { }
+                    } message: {
+                        Text("You have unsaved changes. Do you want to save before closing?")
+                    }
+                    .fileExporter(
+                        isPresented: $showExportDialog,
+                        document: document,
+                        contentType: UTType(filenameExtension: "httprequest")!,
+                        defaultFilename: "RESTed Import"
+                    ) { _ in
+                    }
+            }
         }
-       
-         
-           
-
-
-            
-        
     }
 
 }

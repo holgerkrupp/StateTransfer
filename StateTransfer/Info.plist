@@ -2,94 +2,84 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleDocumentTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeIconFile</key>
-			<string>Legacy</string>
-			<key>CFBundleTypeIconSystemGenerated</key>
-			<integer>1</integer>
-			<key>CFBundleTypeName</key>
-			<string>StateTransfer Request</string>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>LSHandlerRank</key>
-			<string>Default</string>
-			<key>LSItemContentTypes</key>
-			<array>
-				<string>de.holgerkrupp.statetransfer.request</string>
-			</array>
-			<key>NSDocumentClass</key>
-			<string>NSDocument</string>
-		</dict>
-	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
-	<key>UTExportedTypeDeclarations</key>
+	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
-			<key>UTTypeConformsTo</key>
-			<array/>
-			<key>UTTypeDescription</key>
-			<string>StateTransfer Request</string>
-			<key>UTTypeIconFile</key>
-			<string>Legacy</string>
-			<key>UTTypeIcons</key>
-			<dict>
-				<key>UTTypeIconBackgroundName</key>
-				<string>IconBackground</string>
-				<key>UTTypeIconBadgeName</key>
-				<string>IconForeground</string>
-				<key>UTTypeIconText</key>
-				<string>REST</string>
-			</dict>
-			<key>UTTypeIdentifier</key>
-			<string>de.holgerkrupp.statetransfer.request</string>
-			<key>UTTypeTagSpecification</key>
-			<dict>
-				<key>public.filename-extension</key>
-				<array>
-					<string>httprequest</string>
-				</array>
-				<key>public.mime-type</key>
-				<array>
-					<string>application/json</string>
-				</array>
-			</dict>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>CFBundleTypeName</key>
+			<string>HTTPTransfer Request</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>de.holgerkrupp.statetransfer-request</string>
+			</array>
+			<key>NSUbiquitousDocumentUserActivityType</key>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER).httprequest</string>
 		</dict>
 	</array>
 	<key>UTImportedTypeDeclarations</key>
 	<array>
 		<dict>
 			<key>UTTypeConformsTo</key>
-			<array/>
+			<array>
+				<string>public.json</string>
+			</array>
 			<key>UTTypeDescription</key>
 			<string>StateTransfer Request</string>
-			<key>UTTypeIconFile</key>
-			<string>Legacy</string>
 			<key>UTTypeIcons</key>
 			<dict>
-				<key>UTTypeIconBackgroundName</key>
-				<string>IconBackground</string>
 				<key>UTTypeIconBadgeName</key>
 				<string>IconForeground</string>
+				<key>UTTypeIconBackgroundName</key>
+				<string>IconBackground</string>
 				<key>UTTypeIconText</key>
 				<string>REST</string>
 			</dict>
 			<key>UTTypeIdentifier</key>
-			<string>de.holgerkrupp.statetransfer.request</string>
+			<string>de.holgerkrupp.statetransfer-request</string>
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
 				<array>
 					<string>httprequest</string>
 				</array>
-				<key>public.mime-type</key>
+			</dict>
+		</dict>
+	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>StateTransfer Request</string>
+			<key>UTTypeIcons</key>
+			<dict>
+				<key>UTTypeIconBadgeName</key>
+				<string>IconForeground</string>
+				<key>UTTypeIconBackgroundName</key>
+				<string>IconBackground</string>
+				<key>UTTypeIconText</key>
+				<string>REST</string>
+			</dict>
+			<key>UTTypeIdentifier</key>
+			<string>de.holgerkrupp.statetransfer-request</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
 				<array>
-					<string>application/json</string>
+					<string>httprequest</string>
 				</array>
 			</dict>
 		</dict>

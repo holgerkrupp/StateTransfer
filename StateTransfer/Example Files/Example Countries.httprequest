@@ -1,1 +1,14 @@
-{"method":"get","body":"","bodyEncoding":"UTF-8","header":[],"url":"https:\/\/restcountries.com\/v3.1\/name\/South%20korea?fullText=true","parameterEncoding":"Form encoded","follorRedirects":true,"parameters":[]}
+{
+    "method": "get",
+    "body": "",
+    "bodyEncoding": "UTF-8",
+    "header": [
+
+    ],
+    "url": "https://restcountries.com/v3.1/name/South%20korea?fullText=true",
+    "parameterEncoding": "Form encoded",
+    "follorRedirects": true,
+    "parameters": [
+
+    ]
+}

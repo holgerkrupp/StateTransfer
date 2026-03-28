@@ -11,33 +11,36 @@ struct RequestView: View {
     @ObservedObject var request: HTTPRequest
     
     var body: some View {
-        HSplitView {
-            VStack{
-                EndPointView(endpoint: $request.url, method: $request.method)
-                Toggle("Follow Redirects", isOn: $request.follorRedirects)
-                
-                AuthenticationView(credentials: $request.authorizationCredentials, url: request.url?.host ?? "")
-                
-                Divider()
-                RequestHeaderView(header: $request.header)
-                Divider()
-                RequestParamterView(header: $request.parameters, parameterEncoding: $request.parameterEncoding)
-                Divider()
-                RequestBodyView(message: $request.body, bodyEncoding: $request.bodyEncoding)
-                  //  .disabled(document.request.method == .get)
+        VStack(spacing: 0) {
+            HSplitView {
+                VStack{
+                    EndPointView(endpoint: $request.url, method: $request.method)
+                    Toggle("Follow Redirects", isOn: $request.follorRedirects)
+                    
+                    AuthenticationView(credentials: $request.authorizationCredentials, url: request.url?.host ?? "")
+                    
+                    Divider()
+                    RequestHeaderView(header: $request.header)
+                    Divider()
+                    RequestParamterView(header: $request.parameters, parameterEncoding: $request.parameterEncoding)
+                    Divider()
+                    RequestBodyView(message: $request.body, bodyEncoding: $request.bodyEncoding)
+                }
+                .padding()
+                .frame(maxWidth: 500)
+                VStack{
+                  
+                    ResponseView(request: request)
+                     
+                }
+                .frame(minWidth: 200)
+                .padding()
             }
-            .padding()
-            .frame(maxWidth: 500)
-            VStack{
-              
-                ResponseView(requestid: $request.id)
-                 
-            }
-            .frame(minWidth: 200)
-            .padding()
+            Divider()
+            StatusBarView(request: request)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
         }
-        StatusBarView(request: request)
-            .padding([.leading, .bottom])
     }
 }
 

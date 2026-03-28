@@ -1,18 +1,30 @@
-import SwiftUI
 //
 //  HTTPRequestDocument.swift
 //  StateTransfer
 //
 //  Created by Holger Krupp on 20.02.25.
 //
+import SwiftUI
 import UniformTypeIdentifiers
+
+extension UTType {
+    static var statetransferRequest: UTType {
+        UTType(exportedAs: "de.holgerkrupp.statetransfer-request")
+        
+    }
+    
+    static var restED: UTType {
+        UTType(filenameExtension: "request")!
+    }
+    
+}
 
 class HTTPRequestDocument: FileDocument, ObservableObject {
     static var readableContentTypes: [UTType] {
-        [UTType(filenameExtension: "httprequest") ?? .json, UTType(filenameExtension: "request")!]
+        [.statetransferRequest, .restED]
     }
     static var writableContentTypes: [UTType] {
-        [UTType(filenameExtension: "httprequest") ?? .json]
+        [.statetransferRequest]
     }
 
     //var request: HTTPRequest
@@ -64,7 +76,7 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
         }
         
         // Detect if the file is XML (Plist)
-        if configuration.contentType == UTType(filenameExtension: "request") {
+        if configuration.contentType == .restED {
             do {
                 if let jsonData = convertPlistToJson(plistData: data) {
                     let temp = try JSONDecoder().decode(HTTPRequest.self, from: jsonData)
@@ -92,7 +104,7 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
             
         }
         
-        if configuration.contentType == UTType(filenameExtension: "request") {
+        if configuration.contentType == .restED {
             self.isImported = true
         }
         attachObservers()

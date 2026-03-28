@@ -13,38 +13,29 @@ struct RequestsTabView: View {
     @ObservedObject var document: HTTPRequestDocument
 
     var body: some View {
-        HStack {
-            Button(action: {
-                document.addRequest(nil)
-            }) {
-                Image(systemName: "plus.square")
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-            }
-            .padding(.horizontal)
+        HStack(spacing: 12) {
+            addRequestButton
 
-            HStack {
-                ForEach($document.requests, id: \.id) { req in
-                    TabItemView(
-                                            request: req,
-                                            selectedRequestID: $selectedRequestID,
-                                            document: document,
-                                            onClose: { closeRequest(req.wrappedValue) } // Pass close handler
-                                        )
-                    .contentShape(Rectangle())
-                    .background(selectedRequestID == req.id.wrappedValue ? AnyShapeStyle(.tint) : AnyShapeStyle(Color.clear))
-                    
-                        .cornerRadius(8)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach($document.requests, id: \.id) { req in
+                        TabItemView(
+                            request: req,
+                            selectedRequestID: $selectedRequestID,
+                            document: document,
+                            onClose: { closeRequest(req.wrappedValue) }
+                        )
                         .onTapGesture {
                             if selectedRequestID != req.id.wrappedValue {
                                 selectedRequestID = req.id.wrappedValue
                             }
                         }
-
+                    }
                 }
-                Spacer()
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
         .onAppear {
             if selectedRequestID == nil, !$document.requests.isEmpty {
                 selectedRequestID = $document.requests.first?.id.wrappedValue
@@ -68,6 +59,24 @@ struct RequestsTabView: View {
 
         }
     }
+
+    @ViewBuilder
+    private var addRequestButton: some View {
+        let button = Button {
+            let request = HTTPRequest()
+            document.addRequest(request)
+            selectedRequestID = request.id
+        } label: {
+            Label("New", systemImage: "plus")
+                .labelStyle(.iconOnly)
+        }
+
+        if #available(macOS 26.0, *) {
+            button.buttonStyle(.glass)
+        } else {
+            button.buttonStyle(.bordered)
+        }
+    }
 }
 
 struct TabItemView: View {
@@ -78,8 +87,20 @@ struct TabItemView: View {
     @State private var tempName: String = ""
     let onClose: () -> Void // Closure to close tab
 
+    private var isSelected: Bool {
+        selectedRequestID == request.id
+    }
+
+    private var foregroundColor: Color {
+        if #available(macOS 26.0, *) {
+            return isSelected ? .primary : .secondary
+        }
+
+        return isSelected ? .white : .primary
+    }
+
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             Spacer()
             if isEditing {
                 TextField("", text: $tempName, onCommit: {
@@ -95,19 +116,33 @@ struct TabItemView: View {
             } else {
                 Text(request.name)
                     .onTapGesture(count: 2) { isEditing = true }
-                    .foregroundColor(selectedRequestID == request.id ? Color.white : Color.primary)
+                    .foregroundStyle(foregroundColor)
             }
             Spacer()
             Button(action: onClose) {
-                            Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(selectedRequestID == request.id ? Color.white : Color.primary)
-                                .opacity(0.7)
-                        }
-                        .buttonStyle(.plain)
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(foregroundColor)
+                    .opacity(0.7)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .frame(minWidth: 100, maxWidth: 200)
+        .background {
+            if isSelected {
+                if #available(macOS 26.0, *) {
+                    Color.clear
+                        .glassEffect(.regular.tint(.accentColor), in: Capsule())
+                } else {
+                    Capsule()
+                        .fill(.tint)
+                }
+            } else {
+                Capsule()
+                    .fill(Color.secondary.opacity(0.12))
+            }
+        }
     }
 }
 

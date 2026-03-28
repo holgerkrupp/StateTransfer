@@ -7,7 +7,112 @@
 
 import Foundation
 
+struct HTTPResponseSnapshot: Equatable {
+    var statusCode: Int
+    var message: String?
+    var imageData: Data?
+    var messageEncoding: BodyEncoding
+    var contentType: ContentType
+    var header: [HeaderEntry]
+    var requestTime: Double?
 
+    static func response(
+        data: Data,
+        response: HTTPURLResponse,
+        elapsedTime: Double
+    ) -> HTTPResponseSnapshot {
+        let (encoding, type) = extractEncodingAndContentType(from: response)
+        let messageEncoding = encoding ?? .utf8
+        let contentType = type ?? .text(.plain)
+
+        var message: String?
+        var imageData: Data?
+
+        switch contentType {
+        case .text:
+            message = String(data: data, encoding: messageEncoding.encoding)
+        case .image:
+            imageData = data
+        case .unknown:
+            break
+        }
+
+        return HTTPResponseSnapshot(
+            statusCode: response.statusCode,
+            message: message,
+            imageData: imageData,
+            messageEncoding: messageEncoding,
+            contentType: contentType,
+            header: transformHeaders(response.allHeaderFields),
+            requestTime: elapsedTime
+        )
+    }
+
+    static func error(_ error: Error) -> HTTPResponseSnapshot {
+        HTTPResponseSnapshot(
+            statusCode: 0,
+            message: error.localizedDescription,
+            imageData: nil,
+            messageEncoding: .utf8,
+            contentType: .text(.plain),
+            header: [],
+            requestTime: 0
+        )
+    }
+
+    private static func extractEncodingAndContentType(
+        from response: HTTPURLResponse
+    ) -> (BodyEncoding?, ContentType?) {
+        guard let contentType = response.allHeaderFields["Content-Type"] as? String else {
+            return (nil, nil)
+        }
+
+        let components = contentType.lowercased().components(separatedBy: ";")
+        let mimeType = components.first?.trimmingCharacters(in: .whitespaces)
+        let resolvedContentType = ContentType.from(mimeType ?? "")
+
+        let encoding = components
+            .first(where: { $0.contains("charset=") })
+            .flatMap { charsetComponent in
+                let charset = charsetComponent
+                    .replacingOccurrences(of: "charset=", with: "")
+                    .trimmingCharacters(in: .whitespaces)
+
+                return BodyEncoding.allCases.first { $0.value.contains(charset) }
+            }
+
+        return (encoding, resolvedContentType)
+    }
+
+    private static func transformHeaders(
+        _ allHeaderFields: [AnyHashable: Any]
+    ) -> [HeaderEntry] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "E, d MMM yyyy HH:mm:ss Z"
+
+        return allHeaderFields.reduce(into: [HeaderEntry]()) { result, entry in
+            guard let key = entry.key as? String else {
+                return
+            }
+
+            let value: String
+            switch entry.value {
+            case let string as String:
+                value = string
+            case let int as Int:
+                value = String(int)
+            case let number as NSNumber:
+                value = number.stringValue
+            case let date as Date:
+                value = formatter.string(from: date)
+            default:
+                value = "\(entry.value)"
+            }
+
+            result.append(HeaderEntry(active: false, key: key, value: value))
+        }
+    }
+}
 
 class HTTPRequest: Codable, ObservableObject, Equatable {
     static func == (lhs: HTTPRequest, rhs: HTTPRequest) -> Bool {
@@ -27,10 +132,12 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
     @Published var bodyEncoding: BodyEncoding = .utf8 { didSet { notifyChange() } }
     @Published var follorRedirects: Bool = true { didSet { notifyChange() } }
     @Published var authorizationCredentials: Authentication = Authentication() { didSet { notifyChange() } }
+    @Published var responseSnapshot: HTTPResponseSnapshot?
 
     private func notifyChange() {
            objectWillChange.send() // Notify SwiftUI about property change
            onChange?() // Trigger document save
+         
        }
 
        var onChange: (() -> Void)? 
@@ -87,76 +194,69 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
     
     var request: URLRequest? {
         guard let url else { return nil }
+
         var request = URLRequest(url: url)
-        
-        
-        // METHOD
         request.httpMethod = method.rawValue
 
-        // HEADER
-        
         if authorizationCredentials.active {
-            request.setValue(basicAuthHeader(username: authorizationCredentials.username, password: authorizationCredentials.password), forHTTPHeaderField: "Authorization")
+            request.setValue(
+                basicAuthHeader(
+                    username: authorizationCredentials.username,
+                    password: authorizationCredentials.password
+                ),
+                forHTTPHeaderField: "Authorization"
+            )
         }
-        for entry in header.filter({ $0.active }) {
+
+        for entry in header where entry.active {
             request.addValue(entry.value, forHTTPHeaderField: entry.key)
         }
 
-        // BODY
+        let activeParameters = parameters.filter(\.active)
+        let rawBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
+
         switch method {
         case .get, .head, .options, .trace, .connect:
-           
-            var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-            urlComponents.queryItems = parameters
-                .filter { $0.active }
-                .map { URLQueryItem(name: $0.key, value: $0.value) }
-            request.url = urlComponents.url!
+            if let requestURL = mergedURL(baseURL: url, with: activeParameters) {
+                request.url = requestURL
+            }
 
         case .post, .put, .patch, .delete:
             switch parameterEncoding {
             case .form:
-                let bodyString = parameters
-                    .filter { $0.active }
-                    .map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)" }
-                    .joined(separator: "&")
-                request.httpBody = bodyString.data(using: bodyEncoding.encoding)
+                let encodedParameters = formEncodedBody(from: activeParameters)
+
+                if !rawBody.isEmpty, !encodedParameters.isEmpty {
+                    request.httpBody = "\(rawBody)&\(encodedParameters)".data(using: bodyEncoding.encoding)
+                } else if !encodedParameters.isEmpty {
+                    request.httpBody = encodedParameters.data(using: bodyEncoding.encoding)
+                } else if !rawBody.isEmpty {
+                    request.httpBody = rawBody.data(using: bodyEncoding.encoding)
+                }
+
+                if request.httpBody != nil, request.value(forHTTPHeaderField: "Content-Type") == nil {
+                    request.setValue(
+                        "application/x-www-form-urlencoded; \(bodyEncoding.value)",
+                        forHTTPHeaderField: "Content-Type"
+                    )
+                }
 
             case .json:
-                var jsonBody: [String: Any] = [:]
+                request.httpBody = jsonBody(from: rawBody, parameters: activeParameters)
 
-                
-                if let existingBody = request.httpBody,
-                   let existingJson = try? JSONSerialization.jsonObject(with: existingBody, options: []) as? [String: Any] {
-                    jsonBody = existingJson
+                if request.httpBody != nil, request.value(forHTTPHeaderField: "Content-Type") == nil {
+                    request.setValue(
+                        "application/json; \(bodyEncoding.value)",
+                        forHTTPHeaderField: "Content-Type"
+                    )
                 }
+            }
 
-                
-                for param in parameters where param.active {
-                    jsonBody[param.key] = param.value
-                }
-
-              
-                request.httpBody = try? JSONSerialization.data(withJSONObject: jsonBody, options: [])
+            if request.httpBody != nil,
+               request.value(forHTTPHeaderField: "Content-Type") == nil {
+                request.setValue("text/plain; \(bodyEncoding.value)", forHTTPHeaderField: "Content-Type")
             }
         }
-        
-    
-        if method != .get {
-        
-        if body.count > 0, let bodyData = body.data(using: bodyEncoding.encoding) {
-            if request.httpBody == nil {
-                request.httpBody = bodyData
-            } else {
-                var combinedBody = (try? JSONSerialization.jsonObject(with: request.httpBody!, options: []) as? [String: Any]) ?? [:]
-                if let newBody = try? JSONSerialization.jsonObject(with: bodyData, options: []) as? [String: Any] {
-                    combinedBody.merge(newBody) { _, new in new }
-                }
-                request.httpBody = try? JSONSerialization.data(withJSONObject: combinedBody, options: [])
-            }
-        }
-
-        }
-
 
         return request
     }
@@ -244,11 +344,10 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
         return "Basic \(base64Credentials)"
     }
     
+    @MainActor
     func run() async{
-       
         guard let request else { return  }
-        
-       // dump(request)
+        let credentials = authorizationCredentials
 
         let session = createSession(followRedirect: follorRedirects)
         let startTime = DispatchTime.now()
@@ -258,24 +357,27 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
             
             let endTime = DispatchTime.now()
             let elapsedTime = Double(endTime.uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
-            DispatchQueue.main.async{
-                NotificationCenter.default.post(name: NSNotification.Name("HTTPResponse"), object: (self.id, data, response, elapsedTime), userInfo: (response as? HTTPURLResponse)?.allHeaderFields)
-                if (response as? HTTPURLResponse)?.statusCode == 200 {
-                    if let server =  request.url?.host(),
-                       !self.authorizationCredentials.username.isEmpty,
-                       !self.authorizationCredentials.password.isEmpty {
-                        KeychainManager.saveCredentials(self.authorizationCredentials, server: server)
+
+            if let httpResponse = response as? HTTPURLResponse {
+                responseSnapshot = HTTPResponseSnapshot.response(
+                    data: data,
+                    response: httpResponse,
+                    elapsedTime: elapsedTime
+                )
+
+                if httpResponse.statusCode == 200 {
+                    if let server = request.url?.host(),
+                       !credentials.username.isEmpty,
+                       !credentials.password.isEmpty {
+                        KeychainManager.saveCredentials(credentials, server: server)
                     }
                 } else {
                     print("Invalid credentials, not saving to Keychain.")
                 }
             }
-            
         }catch{
             print(error)
-            DispatchQueue.main.async{
-                NotificationCenter.default.post(name: NSNotification.Name("HTTPError"), object: (self.id, error))
-            }
+            responseSnapshot = HTTPResponseSnapshot.error(error)
         }
     }
    private func createSession(followRedirect: Bool) -> URLSession {
@@ -284,6 +386,65 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
         } else {
             return URLSession(configuration: .default, delegate: RedirectHandler(), delegateQueue: nil)
         }
+    }
+
+    private func mergedURL(baseURL: URL, with parameters: [HeaderEntry]) -> URL? {
+        guard !parameters.isEmpty else { return baseURL }
+
+        guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+            return baseURL
+        }
+
+        var queryItems = components.queryItems ?? []
+        queryItems.append(contentsOf: parameters.map {
+            URLQueryItem(name: $0.key, value: $0.value)
+        })
+        components.queryItems = queryItems
+
+        return components.url
+    }
+
+    private func formEncodedBody(from parameters: [HeaderEntry]) -> String {
+        parameters
+            .map {
+                "\(formEncoded($0.key))=\(formEncoded($0.value))"
+            }
+            .joined(separator: "&")
+    }
+
+    private func jsonBody(from rawBody: String, parameters: [HeaderEntry]) -> Data? {
+        guard !rawBody.isEmpty || !parameters.isEmpty else {
+            return nil
+        }
+
+        if parameters.isEmpty {
+            return rawBody.data(using: bodyEncoding.encoding)
+        }
+
+        var jsonObject: [String: Any] = [:]
+
+        if !rawBody.isEmpty {
+            guard let rawData = rawBody.data(using: bodyEncoding.encoding),
+                  let existingJSON = try? JSONSerialization.jsonObject(with: rawData) as? [String: Any] else {
+                return rawBody.data(using: bodyEncoding.encoding)
+            }
+            jsonObject = existingJSON
+        }
+
+        for parameter in parameters {
+            jsonObject[parameter.key] = parameter.value
+        }
+
+        return try? JSONSerialization.data(withJSONObject: jsonObject, options: [])
+    }
+
+    private func formEncoded(_ value: String) -> String {
+        var allowedCharacters = CharacterSet.urlQueryAllowed
+        allowedCharacters.remove(charactersIn: ":#[]@!$&'()*+,;=")
+
+        return value
+            .addingPercentEncoding(withAllowedCharacters: allowedCharacters)?
+            .replacingOccurrences(of: "%20", with: "+") ?? value
     }
 }
 

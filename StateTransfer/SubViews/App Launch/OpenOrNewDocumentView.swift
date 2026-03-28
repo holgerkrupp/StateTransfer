@@ -18,18 +18,43 @@ struct OpenOrNewDocumentView: View {
                 .frame(width: 150)
             Spacer()
             
-            Button(action: recentManager.openOtherFile) {
-                Label("Open Other...", systemImage: "folder")
-            }
-            .buttonStyle(.bordered)
-            .padding()
+            openOtherButton
             Spacer()
-            Button(action: recentManager.newDocument) {
-                Label("New Request", systemImage: "doc.badge.plus")
-            }
-            .buttonStyle(.borderedProminent)
-            .padding()
-           
+            newRequestButton
+        }
+    }
+
+    @ViewBuilder
+    private var openOtherButton: some View {
+        let button = Button(action: recentManager.openOtherFile) {
+            Label("Open Other...", systemImage: "folder")
+        }
+
+        if #available(macOS 26.0, *) {
+            button
+                .buttonStyle(.glass)
+                .padding()
+        } else {
+            button
+                .buttonStyle(.bordered)
+                .padding()
+        }
+    }
+
+    @ViewBuilder
+    private var newRequestButton: some View {
+        let button = Button(action: recentManager.newDocument) {
+            Label("New Request", systemImage: "doc.badge.plus")
+        }
+
+        if #available(macOS 26.0, *) {
+            button
+                .buttonStyle(.glassProminent)
+                .padding()
+        } else {
+            button
+                .buttonStyle(.borderedProminent)
+                .padding()
         }
     }
     
