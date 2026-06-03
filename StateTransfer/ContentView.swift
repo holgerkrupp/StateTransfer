@@ -56,7 +56,7 @@ struct ContentView: View {
                     .fileExporter(
                         isPresented: $showExportDialog,
                         document: document,
-                        contentType: UTType(filenameExtension: "httprequest")!,
+                        contentType: .statetransferRequest,
                         defaultFilename: "RESTed Import"
                     ) { _ in
                     }

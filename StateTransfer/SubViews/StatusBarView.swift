@@ -32,6 +32,15 @@ struct StatusBarView: View {
                 exportHttpFile()
             }
             Spacer()
+            secondaryActionButton(
+                title: "Request Header",
+                systemImage: "list.bullet.rectangle",
+                isDisabled: request.isRequestRunning
+            ) {
+                Task {
+                    await request.requestHeadersOnly()
+                }
+            }
             primaryActionButton {
                 Task{
                     await request.run()
@@ -116,11 +125,13 @@ struct StatusBarView: View {
     private func secondaryActionButton(
         title: String,
         systemImage: String,
+        isDisabled: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         let button = Button(action: action) {
             Label(title, systemImage: systemImage)
         }
+        .disabled(isDisabled)
 
         if #available(macOS 26.0, *) {
             button.buttonStyle(.glass)
@@ -134,6 +145,7 @@ struct StatusBarView: View {
         let button = Button(action: action) {
             Label("Send Request", systemImage: "paperplane.fill")
         }
+        .disabled(request.isRequestRunning)
 
         if #available(macOS 26.0, *) {
             button.buttonStyle(.glassProminent)

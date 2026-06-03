@@ -12,10 +12,18 @@
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>httprequest</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>Legacy Icon</string>
+			<key>CFBundleTypeIconSystemGenerated</key>
+			<integer>1</integer>
 			<key>LSHandlerRank</key>
 			<string>Owner</string>
 			<key>CFBundleTypeName</key>
-			<string>HTTPTransfer Request</string>
+			<string>StateTransfer Request</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSItemContentTypes</key>
@@ -26,7 +34,7 @@
 			<string>$(PRODUCT_BUNDLE_IDENTIFIER).httprequest</string>
 		</dict>
 	</array>
-	<key>UTImportedTypeDeclarations</key>
+	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
 			<key>UTTypeConformsTo</key>
@@ -35,6 +43,8 @@
 			</array>
 			<key>UTTypeDescription</key>
 			<string>StateTransfer Request</string>
+			<key>UTTypeIconFile</key>
+			<string>Legacy Icon</string>
 			<key>UTTypeIcons</key>
 			<dict>
 				<key>UTTypeIconBadgeName</key>
@@ -52,34 +62,9 @@
 				<array>
 					<string>httprequest</string>
 				</array>
-			</dict>
-		</dict>
-	</array>
-	<key>UTExportedTypeDeclarations</key>
-	<array>
-		<dict>
-			<key>UTTypeConformsTo</key>
-			<array>
-				<string>public.json</string>
-			</array>
-			<key>UTTypeDescription</key>
-			<string>StateTransfer Request</string>
-			<key>UTTypeIcons</key>
-			<dict>
-				<key>UTTypeIconBadgeName</key>
-				<string>IconForeground</string>
-				<key>UTTypeIconBackgroundName</key>
-				<string>IconBackground</string>
-				<key>UTTypeIconText</key>
-				<string>REST</string>
-			</dict>
-			<key>UTTypeIdentifier</key>
-			<string>de.holgerkrupp.statetransfer-request</string>
-			<key>UTTypeTagSpecification</key>
-			<dict>
-				<key>public.filename-extension</key>
+				<key>public.mime-type</key>
 				<array>
-					<string>httprequest</string>
+					<string>application/json</string>
 				</array>
 			</dict>
 		</dict>

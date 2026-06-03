@@ -20,6 +20,9 @@ struct RecentFilesView: View {
             List(recentManager.recentDocs) { doc in
                 HStack {
                     Image(nsImage: doc.fileIcon)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 40, height: 40)
                     VStack(alignment: .leading) {
                         Text(doc.name)
                             .font(.headline)

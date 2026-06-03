@@ -9,8 +9,7 @@ import UniformTypeIdentifiers
 
 extension UTType {
     static var statetransferRequest: UTType {
-        UTType(exportedAs: "de.holgerkrupp.statetransfer-request")
-        
+        UTType(exportedAs: "de.holgerkrupp.statetransfer-request", conformingTo: .json)
     }
     
     static var restED: UTType {
@@ -38,12 +37,15 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     var isImported: Bool = false // Track if it's an imported file
     @Published var isDirty = false
     @Published var autoSaveEnabled = true // User setting for auto-save
+    private var hasBeenSaved = false
 
 
     init(request: HTTPRequest = HTTPRequest()) {
         let temp = request
         requests.append(temp)
+        isDirty = true
         attachObservers()
+        noteUnsavedChange()
     }
     
     init(copying document: HTTPRequestDocument) {
@@ -51,6 +53,8 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
         self.isImported = true // Ensure it's treated as an imported file
         
         requests = document.requests
+        hasBeenSaved = document.hasBeenSaved
+        isDirty = document.isDirty
         attachObservers()
     }
     
@@ -63,12 +67,10 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
      }
 
      private func markDirty() {
-         if autoSaveEnabled {
-             saveDocument()
-         } else {
-             isDirty = true
-         }
-     }
+         isDirty = true
+
+         saveDocumentIfPossible()
+      }
 
     required init(configuration: ReadConfiguration) throws {
         guard let data = configuration.file.regularFileContents else {
@@ -107,27 +109,56 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
         if configuration.contentType == .restED {
             self.isImported = true
         }
+        hasBeenSaved = !isImported
+        isDirty = false
         attachObservers()
         
     }
     
      func addRequest(_ request: HTTPRequest?) {
-        requests.append(request ?? HTTPRequest())
+        let newRequest = request ?? HTTPRequest()
+        newRequest.onChange = { [weak self] in
+            self?.markDirty()
+        }
+        requests.append(newRequest)
     }
 
     func saveDocument() {
-            print("saveDocument")
-            objectWillChange.send()
-        isDirty = false
+        objectWillChange.send()
         DispatchQueue.main.async {
             NSApp.sendAction(#selector(NSDocument.save(_:)), to: nil, from: nil)
         }
 
     }
+
+    func saveDocumentIfPossible() {
+        if autoSaveEnabled && hasBeenSaved {
+            saveDocument()
+        } else {
+            noteUnsavedChange()
+        }
+    }
     
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
         let data = try JSONEncoder().encode(requests)
+        DispatchQueue.main.async { [weak self] in
+            self?.hasBeenSaved = true
+            self?.isDirty = false
+            self?.currentAppKitDocument?.updateChangeCount(.changeCleared)
+        }
         return FileWrapper(regularFileWithContents: data)
+    }
+
+    private var currentAppKitDocument: NSDocument? {
+        NSDocumentController.shared.currentDocument
+            ?? NSApp.keyWindow?.windowController?.document as? NSDocument
+            ?? NSApp.mainWindow?.windowController?.document as? NSDocument
+    }
+
+    private func noteUnsavedChange() {
+        DispatchQueue.main.async { [weak self] in
+            self?.currentAppKitDocument?.updateChangeCount(.changeDone)
+        }
     }
 
     func convertPlistToJson(plistData: Data) -> Data? {

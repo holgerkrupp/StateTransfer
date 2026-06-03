@@ -11,6 +11,7 @@ import SwiftUI
 struct EndPointView: View {
     @Binding var endpoint: URL?
     @Binding var method: HTTPMethod
+    let onSubmit: () -> Void
 
     var body: some View {
         HStack{
@@ -18,6 +19,7 @@ struct EndPointView: View {
                 get: { endpoint?.absoluteString ?? ""},
                 set: { endpoint = URL(string: $0) }
                     ))
+            .onSubmit(onSubmit)
             Spacer()
             Picker("", selection: $method, content: {
                 ForEach(HTTPMethod.allCases, id: \.self) { method in
@@ -34,5 +36,5 @@ struct EndPointView: View {
     @Previewable @State var endpoint = URL(string: "http://localhost:3000/")
     @Previewable @State var method: HTTPMethod = .get
 
-    EndPointView(endpoint: $endpoint, method: $method)
+    EndPointView(endpoint: $endpoint, method: $method) {}
 }

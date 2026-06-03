@@ -14,7 +14,9 @@ struct RequestView: View {
         VStack(spacing: 0) {
             HSplitView {
                 VStack{
-                    EndPointView(endpoint: $request.url, method: $request.method)
+                    EndPointView(endpoint: $request.url, method: $request.method) {
+                        sendRequest()
+                    }
                     Toggle("Follow Redirects", isOn: $request.follorRedirects)
                     
                     AuthenticationView(credentials: $request.authorizationCredentials, url: request.url?.host ?? "")
@@ -40,6 +42,12 @@ struct RequestView: View {
             StatusBarView(request: request)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
+        }
+    }
+
+    private func sendRequest() {
+        Task {
+            await request.run()
         }
     }
 }

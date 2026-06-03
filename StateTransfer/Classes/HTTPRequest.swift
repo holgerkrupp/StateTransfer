@@ -11,15 +11,22 @@ struct HTTPResponseSnapshot: Equatable {
     var statusCode: Int
     var message: String?
     var imageData: Data?
+    var bodyData: Data?
     var messageEncoding: BodyEncoding
     var contentType: ContentType
     var header: [HeaderEntry]
     var requestTime: Double?
+    var expectedContentLength: Int64?
+    var receivedBytes: Int64
+    var isLoading: Bool
+    var bodyWasSkipped: Bool
+    var bodyWasCancelled: Bool
 
     static func response(
         data: Data,
         response: HTTPURLResponse,
-        elapsedTime: Double
+        elapsedTime: Double,
+        expectedContentLength: Int64? = nil
     ) -> HTTPResponseSnapshot {
         let (encoding, type) = extractEncodingAndContentType(from: response)
         let messageEncoding = encoding ?? .utf8
@@ -41,10 +48,98 @@ struct HTTPResponseSnapshot: Equatable {
             statusCode: response.statusCode,
             message: message,
             imageData: imageData,
+            bodyData: data,
             messageEncoding: messageEncoding,
             contentType: contentType,
             header: transformHeaders(response.allHeaderFields),
-            requestTime: elapsedTime
+            requestTime: elapsedTime,
+            expectedContentLength: expectedContentLength,
+            receivedBytes: Int64(data.count),
+            isLoading: false,
+            bodyWasSkipped: false,
+            bodyWasCancelled: false
+        )
+    }
+
+    static func headers(
+        response: HTTPURLResponse,
+        expectedContentLength: Int64?
+    ) -> HTTPResponseSnapshot {
+        let (encoding, type) = extractEncodingAndContentType(from: response)
+
+        return HTTPResponseSnapshot(
+            statusCode: response.statusCode,
+            message: nil,
+            imageData: nil,
+            bodyData: nil,
+            messageEncoding: encoding ?? .utf8,
+            contentType: type ?? .unknown(response.mimeType ?? "unknown"),
+            header: transformHeaders(response.allHeaderFields),
+            requestTime: nil,
+            expectedContentLength: expectedContentLength,
+            receivedBytes: 0,
+            isLoading: true,
+            bodyWasSkipped: false,
+            bodyWasCancelled: false
+        )
+    }
+
+    static func headersOnly(
+        response: HTTPURLResponse,
+        expectedContentLength: Int64?
+    ) -> HTTPResponseSnapshot {
+        let (encoding, type) = extractEncodingAndContentType(from: response)
+
+        return HTTPResponseSnapshot(
+            statusCode: response.statusCode,
+            message: nil,
+            imageData: nil,
+            bodyData: nil,
+            messageEncoding: encoding ?? .utf8,
+            contentType: type ?? .unknown(response.mimeType ?? "unknown"),
+            header: transformHeaders(response.allHeaderFields),
+            requestTime: nil,
+            expectedContentLength: expectedContentLength,
+            receivedBytes: 0,
+            isLoading: false,
+            bodyWasSkipped: true,
+            bodyWasCancelled: false
+        )
+    }
+
+    func updatingProgress(receivedBytes: Int64) -> HTTPResponseSnapshot {
+        HTTPResponseSnapshot(
+            statusCode: statusCode,
+            message: message,
+            imageData: imageData,
+            bodyData: bodyData,
+            messageEncoding: messageEncoding,
+            contentType: contentType,
+            header: header,
+            requestTime: requestTime,
+            expectedContentLength: expectedContentLength,
+            receivedBytes: receivedBytes,
+            isLoading: true,
+            bodyWasSkipped: bodyWasSkipped,
+            bodyWasCancelled: bodyWasCancelled
+        )
+    }
+
+    func stoppingBodyDownload(cancelled: Bool) -> HTTPResponseSnapshot {
+        HTTPResponseSnapshot(
+            statusCode: statusCode,
+            message: message,
+            imageData: imageData,
+            bodyData: bodyData,
+            messageEncoding: messageEncoding,
+            contentType: contentType,
+            header: header,
+            requestTime: requestTime,
+            expectedContentLength: expectedContentLength,
+            receivedBytes: receivedBytes,
+            isLoading: false,
+            bodyWasSkipped: !cancelled,
+            bodyWasCancelled: cancelled
         )
     }
 
@@ -53,10 +148,16 @@ struct HTTPResponseSnapshot: Equatable {
             statusCode: 0,
             message: error.localizedDescription,
             imageData: nil,
+            bodyData: error.localizedDescription.data(using: .utf8),
             messageEncoding: .utf8,
             contentType: .text(.plain),
             header: [],
-            requestTime: 0
+            requestTime: 0,
+            expectedContentLength: nil,
+            receivedBytes: 0,
+            isLoading: false,
+            bodyWasSkipped: false,
+            bodyWasCancelled: false
         )
     }
 
@@ -133,6 +234,9 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
     @Published var follorRedirects: Bool = true { didSet { notifyChange() } }
     @Published var authorizationCredentials: Authentication = Authentication() { didSet { notifyChange() } }
     @Published var responseSnapshot: HTTPResponseSnapshot?
+    @Published private(set) var isRequestRunning = false
+    private var activeResponseTask: URLSessionDataTask?
+    private var activeResponseDelegate: ResponseDownloadDelegate?
 
     private func notifyChange() {
            objectWillChange.send() // Notify SwiftUI about property change
@@ -346,48 +450,142 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
     
     @MainActor
     func run() async{
+        await perform(mode: .body)
+    }
+
+    @MainActor
+    func requestHeadersOnly() async {
+        await perform(mode: .headersOnly)
+    }
+
+    @MainActor
+    func cancelBodyDownload() {
+        activeResponseTask?.cancel()
+        activeResponseTask = nil
+        activeResponseDelegate = nil
+        isRequestRunning = false
+
+        if let responseSnapshot, responseSnapshot.isLoading {
+            self.responseSnapshot = responseSnapshot.stoppingBodyDownload(
+                cancelled: true
+            )
+        }
+    }
+
+    @MainActor
+    private func perform(mode: ResponseDownloadMode) async {
         guard let request else { return  }
         let credentials = authorizationCredentials
 
-        let session = createSession(followRedirect: follorRedirects)
         let startTime = DispatchTime.now()
+        isRequestRunning = true
+
+        defer {
+            activeResponseTask = nil
+            activeResponseDelegate = nil
+            isRequestRunning = false
+        }
 
         do{
-            let (data, response) = try await session.data(for: request)
-            
+            let result = try await performRequest(
+                request,
+                followRedirect: follorRedirects,
+                mode: mode
+            )
+
             let endTime = DispatchTime.now()
             let elapsedTime = Double(endTime.uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
 
-            if let httpResponse = response as? HTTPURLResponse {
-                responseSnapshot = HTTPResponseSnapshot.response(
-                    data: data,
-                    response: httpResponse,
-                    elapsedTime: elapsedTime
+            if result.bodyWasSkipped {
+                responseSnapshot = HTTPResponseSnapshot.headersOnly(
+                    response: result.response,
+                    expectedContentLength: result.expectedContentLength
                 )
+            } else if result.bodyWasCancelled {
+                responseSnapshot = responseSnapshot?
+                    .stoppingBodyDownload(cancelled: true)
+                    ?? HTTPResponseSnapshot.headersOnly(
+                        response: result.response,
+                        expectedContentLength: result.expectedContentLength
+                    )
+            } else {
+                responseSnapshot = HTTPResponseSnapshot.response(
+                    data: result.data ?? Data(),
+                    response: result.response,
+                    elapsedTime: elapsedTime,
+                    expectedContentLength: result.expectedContentLength
+                )
+            }
 
-                if httpResponse.statusCode == 200 {
-                    if let server = request.url?.host(),
-                       !credentials.username.isEmpty,
-                       !credentials.password.isEmpty {
-                        KeychainManager.saveCredentials(credentials, server: server)
-                    }
-                } else {
-                    print("Invalid credentials, not saving to Keychain.")
+            if result.response.statusCode == 200 {
+                if let server = request.url?.host(),
+                   !credentials.username.isEmpty,
+                   !credentials.password.isEmpty {
+                    KeychainManager.saveCredentials(credentials, server: server)
                 }
+            } else {
+                print("Invalid credentials, not saving to Keychain.")
             }
         }catch{
             print(error)
             responseSnapshot = HTTPResponseSnapshot.error(error)
         }
     }
-   private func createSession(followRedirect: Bool) -> URLSession {
-        if followRedirect {
-            return URLSession(configuration: .default) // Default behavior follows redirects
-        } else {
-            return URLSession(configuration: .default, delegate: RedirectHandler(), delegateQueue: nil)
+
+    @MainActor
+    private func performRequest(
+        _ request: URLRequest,
+        followRedirect: Bool,
+        mode: ResponseDownloadMode
+    ) async throws -> ResponseDownloadResult {
+        try await withCheckedThrowingContinuation { continuation in
+            var didResume = false
+            let finish: (Result<ResponseDownloadResult, Error>) -> Void = { result in
+                guard !didResume else { return }
+                didResume = true
+
+                switch result {
+                case .success(let value):
+                    continuation.resume(returning: value)
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+
+            let delegate = ResponseDownloadDelegate(
+                followRedirect: followRedirect,
+                mode: mode,
+                onHeaders: { [weak self] response, expectedContentLength in
+                    Task { @MainActor in
+                        self?.responseSnapshot = HTTPResponseSnapshot.headers(
+                            response: response,
+                            expectedContentLength: expectedContentLength
+                        )
+                    }
+                },
+                onProgress: { [weak self] receivedBytes in
+                    Task { @MainActor in
+                        guard let snapshot = self?.responseSnapshot else { return }
+                        guard snapshot.isLoading else { return }
+                        self?.responseSnapshot = snapshot.updatingProgress(
+                            receivedBytes: receivedBytes
+                        )
+                    }
+                },
+                onComplete: finish
+            )
+            let session = URLSession(
+                configuration: .default,
+                delegate: delegate,
+                delegateQueue: nil
+            )
+            delegate.session = session
+            let task = session.dataTask(with: request)
+            activeResponseDelegate = delegate
+            activeResponseTask = task
+            task.resume()
         }
     }
-
     private func mergedURL(baseURL: URL, with parameters: [HeaderEntry]) -> URL? {
         guard !parameters.isEmpty else { return baseURL }
 
@@ -462,12 +660,144 @@ struct HeaderEntry: Equatable, Identifiable, Codable, Hashable {
     }
     
 }
-class RedirectHandler: NSObject, URLSessionTaskDelegate {
+
+private enum ResponseDownloadMode {
+    case body
+    case headersOnly
+}
+
+private struct ResponseDownloadResult {
+    var data: Data?
+    var response: HTTPURLResponse
+    var expectedContentLength: Int64?
+    var bodyWasSkipped: Bool
+    var bodyWasCancelled: Bool
+}
+
+private class ResponseDownloadDelegate: NSObject, URLSessionDataDelegate {
+    weak var session: URLSession?
+
+    private let followRedirect: Bool
+    private let mode: ResponseDownloadMode
+    private let onHeaders: (HTTPURLResponse, Int64?) -> Void
+    private let onProgress: (Int64) -> Void
+    private let onComplete: (Result<ResponseDownloadResult, Error>) -> Void
+    private var response: HTTPURLResponse?
+    private var expectedContentLength: Int64?
+    private var receivedData = Data()
+    private var didFinish = false
+
+    init(
+        followRedirect: Bool,
+        mode: ResponseDownloadMode,
+        onHeaders: @escaping (HTTPURLResponse, Int64?) -> Void,
+        onProgress: @escaping (Int64) -> Void,
+        onComplete: @escaping (Result<ResponseDownloadResult, Error>) -> Void
+    ) {
+        self.followRedirect = followRedirect
+        self.mode = mode
+        self.onHeaders = onHeaders
+        self.onProgress = onProgress
+        self.onComplete = onComplete
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        dataTask: URLSessionDataTask,
+        didReceive response: URLResponse,
+        completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+    ) {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            completionHandler(.cancel)
+            onComplete(.failure(URLError(.badServerResponse)))
+            session.invalidateAndCancel()
+            return
+        }
+
+        let contentLength = response.expectedContentLength > 0
+            ? response.expectedContentLength
+            : nil
+
+        self.response = httpResponse
+        self.expectedContentLength = contentLength
+        receivedData.removeAll(keepingCapacity: true)
+        onHeaders(httpResponse, contentLength)
+
+        if mode == .headersOnly {
+            didFinish = true
+            completionHandler(.cancel)
+            onComplete(.success(ResponseDownloadResult(
+                data: nil,
+                response: httpResponse,
+                expectedContentLength: contentLength,
+                bodyWasSkipped: true,
+                bodyWasCancelled: false
+            )))
+            session.invalidateAndCancel()
+            return
+        }
+
+        completionHandler(.allow)
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        dataTask: URLSessionDataTask,
+        didReceive data: Data
+    ) {
+        receivedData.append(data)
+        onProgress(Int64(receivedData.count))
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didCompleteWithError error: Error?
+    ) {
+        defer {
+            session.finishTasksAndInvalidate()
+        }
+
+        guard !didFinish else {
+            return
+        }
+        didFinish = true
+
+        if let error {
+            if (error as? URLError)?.code == .cancelled, let response {
+                onComplete(.success(ResponseDownloadResult(
+                    data: nil,
+                    response: response,
+                    expectedContentLength: expectedContentLength,
+                    bodyWasSkipped: false,
+                    bodyWasCancelled: true
+                )))
+                return
+            }
+
+            onComplete(.failure(error))
+            return
+        }
+
+        guard let response else {
+            onComplete(.failure(URLError(.badServerResponse)))
+            return
+        }
+
+        onComplete(.success(ResponseDownloadResult(
+            data: receivedData,
+            response: response,
+            expectedContentLength: expectedContentLength,
+            bodyWasSkipped: false,
+            bodyWasCancelled: false
+        )))
+    }
+
     func urlSession(_ session: URLSession,
                     task: URLSessionTask,
                     willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest,
                     completionHandler: @escaping (URLRequest?) -> Void) {
-        completionHandler(nil) // Blocks redirection
+        completionHandler(followRedirect ? request : nil)
     }
 }

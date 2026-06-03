@@ -55,7 +55,7 @@ struct RequestsTabView: View {
                 selectedRequestID = document.requests.first?.id // Select next available tab
             }
 
-            document.saveDocument() // Auto-save when renaming
+            document.saveDocumentIfPossible()
 
         }
     }
@@ -106,7 +106,7 @@ struct TabItemView: View {
                 TextField("", text: $tempName, onCommit: {
                     if !tempName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         request.name = tempName
-                        document.saveDocument() // Auto-save when renaming
+                        document.saveDocumentIfPossible()
                     }
                     isEditing = false
                 })

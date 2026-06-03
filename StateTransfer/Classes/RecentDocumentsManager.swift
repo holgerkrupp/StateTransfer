@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 class RecentDocumentsManager: ObservableObject {
     @Published var recentDocs: [RecentDocument] = []
@@ -21,9 +22,18 @@ class RecentDocumentsManager: ObservableObject {
         let isDownloaded: Bool
         
         var fileIcon: NSImage {
-           
-                return NSWorkspace.shared.icon(forFile: url.absoluteString)
-            
+            let icon: NSImage
+
+            if FileManager.default.fileExists(atPath: url.path) {
+                icon = NSWorkspace.shared.icon(forFile: url.path)
+            } else if let contentType = UTType(filenameExtension: url.pathExtension) {
+                icon = NSWorkspace.shared.icon(for: contentType)
+            } else {
+                icon = NSWorkspace.shared.icon(for: .data)
+            }
+
+            icon.size = NSSize(width: 40, height: 40)
+            return icon
         }
     }
 
