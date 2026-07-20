@@ -18,7 +18,8 @@ struct RequestParamterView: View {
     @State private var selection: Set<HeaderEntry.ID> = []
     
     var body: some View {
-        Table(header, selection: $selection, sortOrder: $sortOrder) {
+        VStack(spacing: 8) {
+            Table(header, selection: $selection, sortOrder: $sortOrder) {
             
             TableColumn("") { object in
                             Toggle(isOn: Binding(
@@ -60,29 +61,46 @@ struct RequestParamterView: View {
                     }
                 ))
             }
-        }
-        
-        .onChange(of: sortOrder) { _, sortOrder in
-                   header.sort(using: sortOrder)
-               }
-        HStack{
-            Picker("", selection: $parameterEncoding, content: {
-                ForEach(ParameterEncoding.allCases, id: \.self) { encoding in
-                    Text(encoding.rawValue).tag(encoding)
+            }
+            .onChange(of: sortOrder) { _, sortOrder in
+                header.sort(using: sortOrder)
+            }
+
+            HStack(spacing: 8) {
+                Picker("Encoding", selection: $parameterEncoding) {
+                    ForEach(ParameterEncoding.allCases, id: \.self) { encoding in
+                        Text(encoding.rawValue).tag(encoding)
+                    }
                 }
-            })
-            .frame(width: 200)
-            Spacer()
-            Button {
-                header.append(HeaderEntry(id: UUID(), active: false, key: "parameter", value: "value"))
-            } label: {
-                Text("+")
+                .labelsHidden()
+                .frame(width: 200)
+
+                Spacer()
+
+                Button {
+                    header.append(HeaderEntry(
+                        id: UUID(),
+                        active: true,
+                        key: "parameter",
+                        value: "value"
+                    ))
+                } label: {
+                    Label("Add Parameter", systemImage: "plus")
+                        .labelStyle(.iconOnly)
+                }
+                .help("Add parameter")
+
+                Button {
+                    header.removeAll { selection.contains($0.id) }
+                } label: {
+                    Label("Remove Selected Parameters", systemImage: "minus")
+                        .labelStyle(.iconOnly)
+                }
+                .disabled(selection.isEmpty)
+                .help("Remove selected parameters")
             }
-            Button {
-                header.removeAll { selection.contains($0.id) }
-            } label: {
-                Text("-")
-            }
+            .buttonStyle(.borderless)
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

@@ -11,8 +11,7 @@ struct AuthenticationView: View {
     let url: String
     
     var body: some View {
-        
-
+        VStack(alignment: .leading, spacing: 10) {
             Toggle("Use Authorization", isOn: $credentials.active)
                 .onChange(of: credentials.active) { _, isActive in
                     if isActive {
@@ -23,23 +22,16 @@ struct AuthenticationView: View {
                         }
                     }
                 }
-  
-                
-        VStack(alignment: .leading) {
-           
-                Form {
-                    HStack{
-                        TextField("Name", text: $credentials.username)
-                            .disabled(!credentials.active)
-                        
-                        SecureField("Password", text: $credentials.password)
-                            .disabled(!credentials.active)
-                    }}
-                
+            HStack(spacing: 8) {
+                TextField("Username", text: $credentials.username)
+                    .textFieldStyle(.roundedBorder)
+                    .disabled(!credentials.active)
+
+                SecureField("Password", text: $credentials.password)
+                    .textFieldStyle(.roundedBorder)
+                    .disabled(!credentials.active)
             }
-
-
-        
+        }
         .onAppear {
             if credentials.active {
                 if credentials.username.isEmpty || credentials.password.isEmpty {
@@ -49,7 +41,6 @@ struct AuthenticationView: View {
                 }
             }
         }
-  
     }
 }
 

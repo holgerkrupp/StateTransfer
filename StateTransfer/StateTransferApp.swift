@@ -11,36 +11,43 @@ import SwiftUI
 struct StateTransferApp: App {
 
     @State private var helpWindow: NSWindow?
+    @StateObject private var historyStore = RequestHistoryStore()
+
     var body: some Scene {
         DocumentGroup(newDocument: HTTPRequestDocument()) { file in
-          
-           
-            ContentView(document: file.$document) 
+            ContentView(
+                document: file.$document,
+                historyStore: historyStore
+            )
         }
         .defaultSize(width: 1000, height: 800)
-        
         .commands {
-                   CommandGroup(replacing: .help) {
-                       Button("Help") {
-                           openHelpWindow()
-                       }
-                       .keyboardShortcut("?", modifiers: .command) // ⌘?
-                       
-                       Button("Rate on the App Store") {
-                                           openAppStoreReviewPage()
-                                       }
-                   }
-            CommandGroup(after: .newItem) {  // Inserts after "New"
+            CommandGroup(replacing: .help) {
+                Button("StateTransfer Help") {
+                    openHelpWindow()
+                }
+                .keyboardShortcut("?", modifiers: .command)
+
+                Button("Rate on the App Store") {
+                    openAppStoreReviewPage()
+                }
+            }
+            CommandGroup(after: .newItem) {
                 ExampleView()
             }
-           
-               }
-        
+            RequestHistoryCommands(historyStore: historyStore)
+            CommandGroup(replacing: .importExport) { }
+            CommandGroup(replacing: .printItem) { }
+            CommandGroup(replacing: .systemServices) { }
+            CommandGroup(replacing: .textFormatting) { }
+        }
+
         Window("StateTransfer", id: "welcome") {
-                    AppLaunchView()
-                }
+            AppLaunchView()
+        }
+        .defaultSize(width: 820, height: 520)
+        .windowResizability(.contentMinSize)
         .defaultLaunchBehavior(.presented)
-        
     }
     
 

@@ -13,16 +13,28 @@ struct RequestBodyView: View {
 
 
     var body: some View {
-        TextEditor(text: $message)
-            .monospaced(true)
-        HStack{
-            Picker("", selection: $bodyEncoding, content: {
-                ForEach(BodyEncoding.allCases, id: \.self) { encoding in
-                    Text(encoding.rawValue).tag(encoding)
+        VStack(spacing: 8) {
+            TextEditor(text: $message)
+                .font(.system(.body, design: .monospaced))
+                .scrollContentBackground(.hidden)
+                .padding(6)
+                .background(
+                    .background.secondary,
+                    in: RoundedRectangle(cornerRadius: 6)
+                )
+
+            HStack {
+                Picker("Encoding", selection: $bodyEncoding) {
+                    ForEach(BodyEncoding.allCases, id: \.self) { encoding in
+                        Text(encoding.rawValue).tag(encoding)
+                    }
                 }
-            })
-            .frame(width: 200)
-            Spacer()
+                .labelsHidden()
+                .frame(width: 200)
+
+                Spacer()
+            }
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

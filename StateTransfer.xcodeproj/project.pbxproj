@@ -10,6 +10,7 @@
 		486DF9732D68AD1C0013F490 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 486DF9712D68AD1C0013F490 /* LICENSE */; };
 		486DF9742D68AD1C0013F490 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 486DF9722D68AD1C0013F490 /* README.md */; };
 		48A619BB2D76EF4D002B27D2 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 48A619BA2D76EF4D002B27D2 /* Highlightr */; };
+		48C100042F00000100100004 /* DynamicJSON in Frameworks */ = {isa = PBXBuildFile; productRef = 48C100032F00000100100003 /* DynamicJSON */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,22 +31,11 @@
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		486DF9472D6741DA0013F490 /* Exceptions for "StateTransfer" folder in "Compile Sources" phase from "StateTransfer" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = 486DF8FA2D666E570013F490 /* Sources */;
-			membershipExceptions = (
-				Resources/HTTPHeaderStandardValues.json,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		486DF9002D666E570013F490 /* StateTransfer */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				486DF9762D6BAFEF0013F490 /* Exceptions for "StateTransfer" folder in "StateTransfer" target */,
-				486DF9472D6741DA0013F490 /* Exceptions for "StateTransfer" folder in "Compile Sources" phase from "StateTransfer" target */,
 			);
 			path = StateTransfer;
 			sourceTree = "<group>";
@@ -58,6 +48,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				48A619BB2D76EF4D002B27D2 /* Highlightr in Frameworks */,
+				48C100042F00000100100004 /* DynamicJSON in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -113,6 +104,7 @@
 			name = StateTransfer;
 			packageProductDependencies = (
 				48A619BA2D76EF4D002B27D2 /* Highlightr */,
+				48C100032F00000100100003 /* DynamicJSON */,
 			);
 			productName = StateTransfer;
 			productReference = 486DF8FE2D666E570013F490 /* StateTransfer.app */;
@@ -144,6 +136,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				48A619B92D76EF4D002B27D2 /* XCRemoteSwiftPackageReference "Highlightr" */,
+				48C100022F00000100100002 /* XCRemoteSwiftPackageReference "swift-dynamicjson" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 486DF8FF2D666E570013F490 /* Products */;
@@ -305,7 +298,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 28;
+				CURRENT_PROJECT_VERSION = 29;
 				DEVELOPMENT_ASSET_PATHS = "\"StateTransfer/Preview Content\"";
 				DEVELOPMENT_TEAM = 46D3VYP253;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -319,7 +312,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2026.2;
+				MARKETING_VERSION = 2026.3;
 				PRODUCT_BUNDLE_IDENTIFIER = de.holgerkrupp.StateTransfer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = macosx;
@@ -338,7 +331,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 28;
+				CURRENT_PROJECT_VERSION = 29;
 				DEVELOPMENT_ASSET_PATHS = "\"StateTransfer/Preview Content\"";
 				DEVELOPMENT_TEAM = 46D3VYP253;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -352,7 +345,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2026.2;
+				MARKETING_VERSION = 2026.3;
 				PRODUCT_BUNDLE_IDENTIFIER = de.holgerkrupp.StateTransfer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = macosx;
@@ -394,6 +387,14 @@
 				minimumVersion = 2.2.1;
 			};
 		};
+		48C100022F00000100100002 /* XCRemoteSwiftPackageReference "swift-dynamicjson" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/objecthub/swift-dynamicjson.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -401,6 +402,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 48A619B92D76EF4D002B27D2 /* XCRemoteSwiftPackageReference "Highlightr" */;
 			productName = Highlightr;
+		};
+		48C100032F00000100100003 /* DynamicJSON */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 48C100022F00000100100002 /* XCRemoteSwiftPackageReference "swift-dynamicjson" */;
+			productName = DynamicJSON;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

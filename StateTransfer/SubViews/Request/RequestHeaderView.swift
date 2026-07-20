@@ -19,8 +19,8 @@ struct RequestHeaderView: View {
     @State private var selection: Set<HeaderEntry.ID> = []
     
     var body: some View {
-       
-        Table(header, selection: $selection, sortOrder: $sortOrder) {
+        VStack(spacing: 8) {
+            Table(header, selection: $selection, sortOrder: $sortOrder) {
             
             TableColumn("") { object in
                             Toggle(isOn: Binding(
@@ -76,27 +76,39 @@ struct RequestHeaderView: View {
                     }()
                 )
             }
-        }
-        
-        
-        .onChange(of: sortOrder) { _, sortOrder in
-                   header.sort(using: sortOrder)
-               }
-        HStack{
-            Spacer()
-            Button {
-                header.append(HeaderEntry(id: UUID(), active: false, key: "header", value: "value"))
-            } label: {
-                Text("+")
             }
-            Button {
-                header.removeAll { selection.contains($0.id) }
-            } label: {
-                Text("-")
+            .onChange(of: sortOrder) { _, sortOrder in
+                header.sort(using: sortOrder)
             }
+
+            HStack(spacing: 8) {
+                Spacer()
+                Button {
+                    header.append(HeaderEntry(
+                        id: UUID(),
+                        active: false,
+                        key: "header",
+                        value: "value"
+                    ))
+                } label: {
+                    Label("Add Header", systemImage: "plus")
+                        .labelStyle(.iconOnly)
+                }
+                .help("Add header")
+
+                Button {
+                    header.removeAll { selection.contains($0.id) }
+                } label: {
+                    Label("Remove Selected Headers", systemImage: "minus")
+                        .labelStyle(.iconOnly)
+                }
+                .disabled(selection.isEmpty)
+                .help("Remove selected headers")
+            }
+            .buttonStyle(.borderless)
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     
 }
-

@@ -10,54 +10,55 @@ import UniformTypeIdentifiers
 
 struct StatusBarView: View {
     @ObservedObject var request: HTTPRequest
+    let onSend: () -> Void
     
     var body: some View {
-        HStack {
-            secondaryActionButton(
-                title: "Copy curl",
-                systemImage: "terminal"
-            ) {
-                copyCurlToClipboard()
-            }
-            secondaryActionButton(
-                title: "Copy Swift",
-                systemImage: "swift"
-            ) {
-                copySwiftToClipboard()
-            }
-            secondaryActionButton(
-                title: "Export .http",
-                systemImage: "square.and.arrow.up"
-            ) {
-                exportHttpFile()
+        HStack(spacing: 10) {
+            Menu {
+                Button {
+                    copyCurlToClipboard()
+                } label: {
+                    Label("Copy as curl", systemImage: "terminal")
+                }
+
+                Button {
+                    copySwiftToClipboard()
+                } label: {
+                    Label("Copy as Swift", systemImage: "swift")
+                }
+
+                Divider()
+
+                Button {
+                    exportHttpFile()
+                } label: {
+                    Label("Export .http File…", systemImage: "doc.badge.arrow.up")
+                }
+            } label: {
+                Label("Export", systemImage: "square.and.arrow.up")
             }
             Spacer()
             secondaryActionButton(
-                title: "Request Header",
+                title: "Headers Only",
                 systemImage: "list.bullet.rectangle",
                 isDisabled: request.isRequestRunning
             ) {
+                onSend()
                 Task {
                     await request.requestHeadersOnly()
                 }
             }
             primaryActionButton {
+                onSend()
                 Task{
                     await request.run()
                 }
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background {
-            if #available(macOS 26.0, *) {
-                Color.clear
-                    .glassEffect(.regular, in: Capsule())
-            } else {
-                Capsule()
-                    .fill(.thinMaterial)
-            }
-        }
+        .padding(.vertical, 10)
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
     }
     
     private func runCurlCommand() {
@@ -146,6 +147,7 @@ struct StatusBarView: View {
             Label("Send Request", systemImage: "paperplane.fill")
         }
         .disabled(request.isRequestRunning)
+        .keyboardShortcut(.return, modifiers: .command)
 
         if #available(macOS 26.0, *) {
             button.buttonStyle(.glassProminent)

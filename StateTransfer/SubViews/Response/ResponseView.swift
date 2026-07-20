@@ -12,6 +12,8 @@ import UniformTypeIdentifiers
 
 
 struct ResponseView: View {
+    private let largeTextThreshold = 50_000
+
     @ObservedObject var request: HTTPRequest
     @State private var statusCode: Int = 0
     @State private var message: String?
@@ -37,28 +39,28 @@ struct ResponseView: View {
     @State private var sortOrder = [KeyPathComparator(\HeaderEntry.key)]
     
     private var prettyPrintedJSON: String {
-        guard let data = message?.data(using: messageEncoding.encoding),
+        guard let bodyData,
               let jsonObject = try? JSONSerialization.jsonObject(
-                with: data,
+                with: bodyData,
                 options: []
               ),
               let prettyData = try? JSONSerialization.data(
                 withJSONObject: jsonObject,
                 options: .prettyPrinted
               ),
-              let prettyString = String(data: prettyData, encoding: messageEncoding.encoding) else {
+              let prettyString = String(data: prettyData, encoding: .utf8) else {
             return "Invalid JSON"
         }
         return prettyString
     }
     
     private var prettyPrintedXML: String {
-        guard let data = message?.data(using: messageEncoding.encoding) else {
+        guard let bodyData else {
             return "Invalid XML"
         }
         do {
             let xmlDocument = try XMLDocument(
-                data: data,
+                data: bodyData,
                 options: .nodePrettyPrint
             )
             return xmlDocument
@@ -71,10 +73,11 @@ struct ResponseView: View {
     }
     
     private var hexRepresentation: String {
-        guard let data = message?.data(using: messageEncoding.encoding) else {
-            return "Invalid String"
-        }
-        return data.map { String(format: "%02hhx", $0) }.joined()
+        guard let bodyData else { return "No response body" }
+        return bodyData.enumerated().map { index, byte in
+            let separator = index > 0 && index.isMultiple(of: 16) ? "\n" : " "
+            return (index == 0 ? "" : separator) + String(format: "%02X", byte)
+        }.joined()
     }
     
     private var displayRepresentation: String {
@@ -110,11 +113,14 @@ struct ResponseView: View {
     }
     
     private var highlightedText: NSAttributedString {
-        if displayRepresentation.count > 200_000 {
-            return NSAttributedString(string: displayRepresentation)
+        let representation = displayRepresentation
+        if displayOption == .text {
+            return NSAttributedString(string: representation)
         }
 
-        let highlightr = Highlightr()!
+        guard let highlightr = Highlightr() else {
+            return NSAttributedString(string: representation)
+        }
         highlightr.setTheme(to: "atom-one-dark") // Choose a theme
 
         let language: String
@@ -126,7 +132,19 @@ struct ResponseView: View {
         case .html: language = "html"
         }
 
-        return highlightr.highlight(displayRepresentation, as: language) ?? NSAttributedString(string: displayRepresentation)
+        return highlightr.highlight(representation, as: language)
+            ?? NSAttributedString(string: representation)
+    }
+
+    private var isLargeTextResponse: Bool {
+        bodyData?.count ?? 0 >= largeTextThreshold
+    }
+
+    private var responseSizeDescription: String {
+        ByteCountFormatter.string(
+            fromByteCount: Int64(bodyData?.count ?? 0),
+            countStyle: .file
+        )
     }
 
     private var progressValue: Double? {
@@ -188,13 +206,34 @@ struct ResponseView: View {
             }
         }
     }
-    
+
     var body: some View {
+        Group {
+            if request.responseSnapshot == nil {
+                ContentUnavailableView(
+                    "No Response Yet",
+                    systemImage: "paperplane",
+                    description: Text("Send the request to inspect its status, headers, and body.")
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                responseContent
+            }
+        }
+        .onAppear {
+            applyStoredResponse(request.responseSnapshot)
+        }
+        .onChange(of: request.responseSnapshot) { _, snapshot in
+            applyStoredResponse(snapshot)
+        }
+    }
+
+    private var responseContent: some View {
         VStack {
             if statusCode != 0 {
                 HStack{
                     statusCodeBadge
-                    VStack{
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(
                             "\(HTTPURLResponse.localizedString(forStatusCode: statusCode))"
                         )
@@ -205,6 +244,10 @@ struct ResponseView: View {
                             requestTime
                                 .map { "Response time: \($0.formatted(.number.precision(.fractionLength(0)))) ms"
                                 } ?? "")
+                        if bodyData != nil {
+                            Text("Result size: \(responseSizeDescription)")
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -273,6 +316,14 @@ struct ResponseView: View {
                     } else if displayOption == .html {
                         WebView(htmlString: message ?? "")
                             .frame(maxWidth: .infinity, minHeight: 200, alignment: .leading)
+                    } else if displayOption == .text {
+                        TextEditor(text: .constant(displayRepresentation))
+                            .font(.system(.body, design: .monospaced))
+                            .frame(
+                                maxWidth: .infinity,
+                                minHeight: 200,
+                                alignment: .leading
+                            )
                     } else {
                         ScrollView {
                             Text(AttributedString(highlightedText))
@@ -318,12 +369,6 @@ struct ResponseView: View {
             
         }
         .textSelection(.enabled)
-        .onAppear {
-            applyStoredResponse(request.responseSnapshot)
-        }
-        .onChange(of: request.responseSnapshot) { _, snapshot in
-            applyStoredResponse(snapshot)
-        }
     }
     
     private func copyToClipboard(value: String) {
@@ -365,16 +410,14 @@ struct ResponseView: View {
         case .text(let subtype):
             switch subtype {
             case .json:
-                guard let data = snapshot.message?.data(using: snapshot.messageEncoding.encoding) else {
-                    return .text
-                }
-                return isValidJSON(data) ? .json : .text
+                return snapshot.bodyData?.count ?? 0 >= largeTextThreshold
+                    ? .text
+                    : .json
 
             case .xml:
-                guard let data = snapshot.message?.data(using: snapshot.messageEncoding.encoding) else {
-                    return .text
-                }
-                return isValidXML(data) ? .xml : .text
+                return snapshot.bodyData?.count ?? 0 >= largeTextThreshold
+                    ? .text
+                    : .xml
 
             case .html:
                 return .html
@@ -405,19 +448,6 @@ struct ResponseView: View {
         bodyWasCancelled = false
     }
     
-    private func isValidJSON(_ data: Data) -> Bool {
-        return (try? JSONSerialization.jsonObject(with: data, options: [])) != nil
-    }
-
-    private func isValidXML(_ data: Data) -> Bool {
-        do {
-            _ = try XMLDocument(data: data, options: .documentTidyXML)
-            return true
-        } catch {
-            return false
-        }
-    }
-
     private func saveResponseBody() {
         guard let bodyData else { return }
 
@@ -608,6 +638,21 @@ private extension ContentType {
         }
     }
 
+}
+
+private extension TextContentType {
+    var highlightLanguage: String {
+        switch self {
+        case .html: return "html"
+        case .xml: return "xml"
+        case .json: return "json"
+        case .yaml: return "yaml"
+        case .markdown: return "markdown"
+        case .css: return "css"
+        case .javascript: return "javascript"
+        case .plain, .csv, .rtf: return "plaintext"
+        }
+    }
 }
 
 private struct ApplicationChoice: Identifiable {

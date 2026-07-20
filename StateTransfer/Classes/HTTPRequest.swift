@@ -30,7 +30,8 @@ struct HTTPResponseSnapshot: Equatable {
     ) -> HTTPResponseSnapshot {
         let (encoding, type) = extractEncodingAndContentType(from: response)
         let messageEncoding = encoding ?? .utf8
-        let contentType = type ?? .text(.plain)
+        var contentType = type
+            ?? .unknown(response.mimeType ?? "application/octet-stream")
 
         var message: String?
         var imageData: Data?
@@ -38,6 +39,11 @@ struct HTTPResponseSnapshot: Equatable {
         switch contentType {
         case .text:
             message = String(data: data, encoding: messageEncoding.encoding)
+            if message == nil {
+                contentType = .unknown(
+                    response.mimeType ?? "application/octet-stream"
+                )
+            }
         case .image:
             imageData = data
         case .unknown:
@@ -164,7 +170,9 @@ struct HTTPResponseSnapshot: Equatable {
     private static func extractEncodingAndContentType(
         from response: HTTPURLResponse
     ) -> (BodyEncoding?, ContentType?) {
-        guard let contentType = response.allHeaderFields["Content-Type"] as? String else {
+        guard let contentType = response.allHeaderFields.first(where: {
+            ($0.key as? String)?.caseInsensitiveCompare("Content-Type") == .orderedSame
+        })?.value as? String else {
             return (nil, nil)
         }
 
@@ -176,10 +184,18 @@ struct HTTPResponseSnapshot: Equatable {
             .first(where: { $0.contains("charset=") })
             .flatMap { charsetComponent in
                 let charset = charsetComponent
-                    .replacingOccurrences(of: "charset=", with: "")
-                    .trimmingCharacters(in: .whitespaces)
+                    .split(separator: "=", maxSplits: 1)
+                    .last?
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines.union(
+                            CharacterSet(charactersIn: "\"'")
+                        )
+                    )
 
-                return BodyEncoding.allCases.first { $0.value.contains(charset) }
+                return BodyEncoding.allCases.first {
+                    $0.value.replacingOccurrences(of: "charset=", with: "")
+                        .caseInsensitiveCompare(charset ?? "") == .orderedSame
+                }
             }
 
         return (encoding, resolvedContentType)
@@ -189,6 +205,7 @@ struct HTTPResponseSnapshot: Equatable {
         _ allHeaderFields: [AnyHashable: Any]
     ) -> [HeaderEntry] {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "E, d MMM yyyy HH:mm:ss Z"
 
         return allHeaderFields.reduce(into: [HeaderEntry]()) { result, entry in
@@ -212,6 +229,7 @@ struct HTTPResponseSnapshot: Equatable {
 
             result.append(HeaderEntry(active: false, key: key, value: value))
         }
+        .sorted { $0.key.localizedCaseInsensitiveCompare($1.key) == .orderedAscending }
     }
 }
 
@@ -248,6 +266,7 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
     
     
     private enum CodingKeys: String, CodingKey {
+        case id
         case url
         case name
         case method
@@ -265,24 +284,40 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
     // Custom Decoder
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         url = try container.decodeIfPresent(URL.self, forKey: .url)
-        method = try container.decode(HTTPMethod.self, forKey: .method)
-        header = try container.decode([HeaderEntry].self, forKey: .header)
-        parameters = try container.decode([HeaderEntry].self, forKey: .parameters)
-        parameterEncoding = try container.decode(ParameterEncoding.self, forKey: .parameterEncoding)
-        body = try container.decode(String.self, forKey: .body)
-        bodyEncoding = try container.decode(BodyEncoding.self, forKey: .bodyEncoding)
-        follorRedirects = try container.decode(Bool.self, forKey: .follorRedirects)
+        method = try container.decodeIfPresent(HTTPMethod.self, forKey: .method)
+            ?? .get
+        header = try container.decodeIfPresent([HeaderEntry].self, forKey: .header)
+            ?? []
+        parameters = try container.decodeIfPresent(
+            [HeaderEntry].self,
+            forKey: .parameters
+        ) ?? []
+        parameterEncoding = try container.decodeIfPresent(
+            ParameterEncoding.self,
+            forKey: .parameterEncoding
+        ) ?? .form
+        body = try container.decodeIfPresent(String.self, forKey: .body) ?? ""
+        bodyEncoding = try container.decodeIfPresent(
+            BodyEncoding.self,
+            forKey: .bodyEncoding
+        ) ?? .utf8
+        follorRedirects = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .follorRedirects
+        ) ?? true
         name = try container.decodeIfPresent(String.self, forKey: .name) ?? "unnamed"
-        // Decode authorizationCredentials but do NOT add it to CodingKeys
-   
-        let rawCredentials = try container.decodeIfPresent(Authentication.self, forKey: .authorizationCredentials)
-           authorizationCredentials = rawCredentials ?? Authentication()
+        authorizationCredentials = (try? container.decode(
+            Authentication.self,
+            forKey: .authorizationCredentials
+        )) ?? Authentication()
     }
 
     // Custom Encoder
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
         try container.encodeIfPresent(url, forKey: .url)
         try container.encode(method, forKey: .method)
         try container.encode(header, forKey: .header)
@@ -297,7 +332,7 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
     
     
     var request: URLRequest? {
-        guard let url else { return nil }
+        guard let url, url.isSupportedHTTPURL else { return nil }
 
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
@@ -380,18 +415,19 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
        
        // Add headers
        if let headers = request.allHTTPHeaderFields {
-           for (key, value) in headers {
-               components.append("-H \"\(key): \(value)\"")
+           for (key, value) in headers.sorted(by: { $0.key < $1.key }) {
+               components.append("-H \(shellQuoted("\(key): \(value)"))")
            }
        }
        
        // Add body
-       if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
-           components.append("-d '\(bodyString)'")
+       if let body = request.httpBody,
+          let bodyString = String(data: body, encoding: bodyEncoding.encoding) {
+           components.append("--data-raw \(shellQuoted(bodyString))")
        }
        
        // Add URL
-       components.append("\"\(url.absoluteString)\"")
+       components.append(shellQuoted(url.absoluteString))
        
        return components.joined(separator: " \\\n    ")
     }
@@ -400,20 +436,21 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
         guard let url = request.url else { return "" }
 
         var code = """
-        var request = URLRequest(url: URL(string: "\(url.absoluteString)")!)
-        request.httpMethod = "\(request.httpMethod ?? "GET")"
+        var request = URLRequest(url: URL(string: \(swiftStringLiteral(url.absoluteString)))!)
+        request.httpMethod = \(swiftStringLiteral(request.httpMethod ?? "GET"))
         """
 
         // Add headers
         if let headers = request.allHTTPHeaderFields, !headers.isEmpty {
-            for (key, value) in headers {
-                code += "\nrequest.setValue(\"\(value)\", forHTTPHeaderField: \"\(key)\")"
+            for (key, value) in headers.sorted(by: { $0.key < $1.key }) {
+                code += "\nrequest.setValue(\(swiftStringLiteral(value)), forHTTPHeaderField: \(swiftStringLiteral(key)))"
             }
         }
 
         // Add body (if present)
-        if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
-            code += "\nrequest.httpBody = \"\(bodyString)\".data(using: .utf8)"
+        if let body = request.httpBody {
+            let bytes = body.map(String.init).joined(separator: ", ")
+            code += "\nrequest.httpBody = Data([\(bytes)])"
         }
 
         return code
@@ -432,7 +469,8 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
         }
 
         // Add body (if applicable)
-        if let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
+        if let body = request.httpBody,
+           let bodyString = String(data: body, encoding: bodyEncoding.encoding) {
             httpContent += "\n\n\(bodyString)"
         }
 
@@ -474,7 +512,16 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
 
     @MainActor
     private func perform(mode: ResponseDownloadMode) async {
-        guard let request else { return  }
+        if RequestTemplateResolver.requestContainsPlaceholder(self) {
+            responseSnapshot = HTTPResponseSnapshot.error(
+                RequestTemplateError.requiresChainRun
+            )
+            return
+        }
+        guard let request else {
+            responseSnapshot = HTTPResponseSnapshot.error(URLError(.badURL))
+            return
+        }
         let credentials = authorizationCredentials
 
         let startTime = DispatchTime.now()
@@ -517,14 +564,13 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
                 )
             }
 
-            if result.response.statusCode == 200 {
+            if (200..<300).contains(result.response.statusCode),
+               credentials.active {
                 if let server = request.url?.host(),
                    !credentials.username.isEmpty,
                    !credentials.password.isEmpty {
                     KeychainManager.saveCredentials(credentials, server: server)
                 }
-            } else {
-                print("Invalid credentials, not saving to Keychain.")
             }
         }catch{
             print(error)
@@ -643,6 +689,23 @@ class HTTPRequest: Codable, ObservableObject, Equatable {
         return value
             .addingPercentEncoding(withAllowedCharacters: allowedCharacters)?
             .replacingOccurrences(of: "%20", with: "+") ?? value
+    }
+
+    private func shellQuoted(_ value: String) -> String {
+        "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+
+    private func swiftStringLiteral(_ value: String) -> String {
+        String(reflecting: value)
+    }
+}
+
+extension URL {
+    var isSupportedHTTPURL: Bool {
+        guard let scheme = scheme?.lowercased(), host != nil else {
+            return false
+        }
+        return scheme == "http" || scheme == "https"
     }
 }
 

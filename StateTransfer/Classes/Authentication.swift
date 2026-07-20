@@ -40,21 +40,21 @@ enum AuthenticationMethod: String, Codable{
 struct KeychainManager {
     
     static func saveCredentials(_ credentials: Authentication, server: String) {
-        
-        
         guard let passwordData = credentials.password.data(using: .utf8) else { return }
-        
-        let query: [String: Any] = [
+
+        let serverQuery: [String: Any] = [
             kSecClass as String: kSecClassInternetPassword,
-            kSecAttrServer as String: server,
-            kSecAttrAccount as String: credentials.username,
-            kSecValueData as String: passwordData
+            kSecAttrServer as String: server
         ]
-        
-        // Delete existing entry (if any) before adding new one
-        SecItemDelete(query as CFDictionary)
-        
-        let status = SecItemAdd(query as CFDictionary, nil)
+
+        // StateTransfer keeps one Basic Auth identity per host. Removing the old
+        // item by host ensures changed usernames and passwords replace it.
+        SecItemDelete(serverQuery as CFDictionary)
+
+        var item = serverQuery
+        item[kSecAttrAccount as String] = credentials.username
+        item[kSecValueData as String] = passwordData
+        let status = SecItemAdd(item as CFDictionary, nil)
         if status != errSecSuccess {
             print("Error saving credentials: \(status)")
         }
@@ -68,14 +68,12 @@ struct KeychainManager {
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
-        dump(query)
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         guard status == errSecSuccess, let existingItem = item as? [String: Any],
               let username = existingItem[kSecAttrAccount as String] as? String,
               let passwordData = existingItem[kSecValueData as String] as? Data,
               let password = String(data: passwordData, encoding: .utf8) else {
-            print("No credentials found for \(server)")
             return nil
         }
         
@@ -89,7 +87,7 @@ struct KeychainManager {
         ]
         
         let status = SecItemDelete(query as CFDictionary)
-        if status != errSecSuccess {
+        if status != errSecSuccess && status != errSecItemNotFound {
             print("Error deleting credentials: \(status)")
         }
     }

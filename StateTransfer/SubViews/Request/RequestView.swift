@@ -9,43 +9,75 @@ import SwiftUI
 
 struct RequestView: View {
     @ObservedObject var request: HTTPRequest
+    @ObservedObject var historyStore: RequestHistoryStore
     
     var body: some View {
         VStack(spacing: 0) {
             HSplitView {
-                VStack{
-                    EndPointView(endpoint: $request.url, method: $request.method) {
-                        sendRequest()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        GroupBox("Endpoint") {
+                            VStack(alignment: .leading, spacing: 10) {
+                                EndPointView(
+                                    endpoint: $request.url,
+                                    method: $request.method
+                                ) {
+                                    sendRequest()
+                                }
+                                Toggle(
+                                    "Follow redirects",
+                                    isOn: $request.follorRedirects
+                                )
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        GroupBox("Authorization") {
+                            AuthenticationView(
+                                credentials: $request.authorizationCredentials,
+                                url: request.url?.host ?? ""
+                            )
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        GroupBox("Headers") {
+                            RequestHeaderView(header: $request.header)
+                                .frame(minHeight: 170)
+                        }
+
+                        GroupBox("Parameters") {
+                            RequestParamterView(
+                                header: $request.parameters,
+                                parameterEncoding: $request.parameterEncoding
+                            )
+                            .frame(minHeight: 170)
+                        }
+
+                        GroupBox("Body") {
+                            RequestBodyView(
+                                message: $request.body,
+                                bodyEncoding: $request.bodyEncoding
+                            )
+                            .frame(minHeight: 180)
+                        }
                     }
-                    Toggle("Follow Redirects", isOn: $request.follorRedirects)
-                    
-                    AuthenticationView(credentials: $request.authorizationCredentials, url: request.url?.host ?? "")
-                    
-                    Divider()
-                    RequestHeaderView(header: $request.header)
-                    Divider()
-                    RequestParamterView(header: $request.parameters, parameterEncoding: $request.parameterEncoding)
-                    Divider()
-                    RequestBodyView(message: $request.body, bodyEncoding: $request.bodyEncoding)
+                    .padding(16)
                 }
-                .padding()
-                .frame(maxWidth: 500)
-                VStack{
-                  
-                    ResponseView(request: request)
-                     
-                }
-                .frame(minWidth: 200)
-                .padding()
+                .frame(minWidth: 360, idealWidth: 460, maxWidth: 620)
+
+                ResponseView(request: request)
+                    .frame(minWidth: 360, maxWidth: .infinity)
+                    .padding(16)
             }
-            Divider()
-            StatusBarView(request: request)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+
+            StatusBarView(request: request) {
+                historyStore.record(request)
+            }
         }
     }
 
     private func sendRequest() {
+        historyStore.record(request)
         Task {
             await request.run()
         }
@@ -55,5 +87,8 @@ struct RequestView: View {
 #Preview {
     @Previewable @State var request: HTTPRequest = .init()
 
-    RequestView(request: request)
+    RequestView(
+        request: request,
+        historyStore: RequestHistoryStore()
+    )
 }

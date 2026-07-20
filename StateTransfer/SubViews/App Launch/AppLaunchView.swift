@@ -13,64 +13,88 @@ struct AppLaunchView: View {
     @State private var dragOver = false
 
     var body: some View {
-        
         ZStack {
-            VStack{
-                HStack {
+            HStack(spacing: 0) {
+                ZStack(alignment: .bottomLeading) {
                     Image("NetworkTerminal")
                         .resizable()
                         .scaledToFill()
-                    
-                    VStack{
-                    
-                        RecentFilesView()
-                            .environmentObject(recentManager)
-                        
+                        .frame(width: 320)
+                        .clipped()
+
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.76)],
+                        startPoint: .center,
+                        endPoint: .bottom
+                    )
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("StateTransfer")
+                            .font(.largeTitle.bold())
+                        Text("Build, inspect, and chain HTTP requests.")
+                            .foregroundStyle(.white.opacity(0.82))
                     }
+                    .foregroundStyle(.white)
+                    .padding(24)
                 }
-                OpenOrNewDocumentView()
-                    .environmentObject(recentManager)
+                .frame(width: 320)
+
+                VStack(spacing: 0) {
+                    RecentFilesView()
+                        .environmentObject(recentManager)
+
+                    OpenOrNewDocumentView()
+                        .environmentObject(recentManager)
+                }
             }
-            .blur(radius: dragOver ? 3 : 0) // Dim the background when dragging
+            .blur(radius: dragOver ? 3 : 0)
             .onDrop(of: [.fileURL], isTargeted: $dragOver) { providers in
                 handleFileDrop(providers: providers)
             }
-            // Drag Overlay (Only visible when dragging)
+
             if dragOver {
-                Color.black.opacity(0.4) // Darken background
-                    .edgesIgnoringSafeArea(.all)
-                    .transition(.opacity)
-                
-                VStack {
-                    Image(systemName: "arrow.down.doc.fill") // Drop icon
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 100, height: 100)
-                        .foregroundColor(.white)
-                    
+                VStack(spacing: 14) {
+                    Image(systemName: "arrow.down.doc.fill")
+                        .font(.system(size: 52))
+                        .foregroundStyle(.tint)
+
                     Text("Drop file to open")
-                        .font(.title)
-                        .bold()
-                        .foregroundColor(.white)
-                        .padding()
+                        .font(.title2.bold())
                 }
-                .transition(AnyTransition.scale)
-                .animation(.easeInOut(duration: 0.5), value: dragOver)
-                
+                .padding(38)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(.tint, style: StrokeStyle(lineWidth: 2, dash: [8]))
+                }
+                .shadow(radius: 20)
+                .transition(.scale.combined(with: .opacity))
             }
-            
-            
         }
-        
+        .frame(minWidth: 720, minHeight: 460)
+        .animation(.snappy, value: dragOver)
     }
+
     private func handleFileDrop(providers: [NSItemProvider]) -> Bool {
         for provider in providers {
             if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-                provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { (item, error) in
-                    if let urlData = item as? Data,
-                       let urlString = String(data: urlData, encoding: .utf8),
-                       let fileURL = URL(string: urlString) {
-                        
+                provider.loadItem(
+                    forTypeIdentifier: UTType.fileURL.identifier,
+                    options: nil
+                ) { item, _ in
+                    let fileURL: URL?
+                    if let url = item as? URL {
+                        fileURL = url
+                    } else if let url = item as? NSURL {
+                        fileURL = url as URL
+                    } else if let data = item as? Data,
+                              let string = String(data: data, encoding: .utf8) {
+                        fileURL = URL(string: string)
+                    } else {
+                        fileURL = nil
+                    }
+
+                    if let fileURL {
                         DispatchQueue.main.async {
                             openDroppedFile(fileURL)
                         }
@@ -82,11 +106,13 @@ struct AppLaunchView: View {
         return false
     }
 
-    /// Opens the dropped file in the app
     private func openDroppedFile(_ url: URL) {
-        NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, _ in
-            NSDocumentController.shared.noteNewRecentDocumentURL(url)
-            recentManager.loadRecentDocuments() // Update the recent list
+        NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { document, _, error in
+            if document != nil {
+                recentManager.noteUserSelectedDocument(at: url)
+            } else if let error {
+                NSApp.presentError(error)
+            }
         }
     }
     

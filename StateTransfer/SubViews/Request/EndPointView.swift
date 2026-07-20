@@ -14,21 +14,24 @@ struct EndPointView: View {
     let onSubmit: () -> Void
 
     var body: some View {
-        HStack{
-            TextField("Link URL", text: Binding(
-                get: { endpoint?.absoluteString ?? ""},
-                set: { endpoint = URL(string: $0) }
-                    ))
-            .onSubmit(onSubmit)
-            Spacer()
-            Picker("", selection: $method, content: {
+        HStack(spacing: 8) {
+            Picker("Method", selection: $method) {
                 ForEach(HTTPMethod.allCases, id: \.self) { method in
                     Text(method.description).tag(method)
                 }
-            })
-            .frame(width: 100)
             }
-       
+            .labelsHidden()
+            .frame(width: 105)
+
+            TextField("https://api.example.com/resource", text: Binding(
+                get: { endpoint?.absoluteString ?? ""},
+                set: { endpoint = URL(string: $0) }
+            ))
+            .textFieldStyle(.roundedBorder)
+            .font(.system(.body, design: .monospaced))
+            .onSubmit(onSubmit)
+            .help("Enter a complete HTTP or HTTPS URL")
+        }
     }
 }
 

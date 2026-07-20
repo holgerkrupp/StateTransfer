@@ -12,32 +12,28 @@ struct OpenOrNewDocumentView: View {
     @EnvironmentObject var recentManager: RecentDocumentsManager
 
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
             ExampleView()
-                .padding()
-                .frame(width: 150)
             Spacer()
-            
             openOtherButton
-            Spacer()
             newRequestButton
         }
+        .controlSize(.large)
+        .padding(16)
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
     }
 
     @ViewBuilder
     private var openOtherButton: some View {
         let button = Button(action: recentManager.openOtherFile) {
-            Label("Open Other...", systemImage: "folder")
+            Label("Open…", systemImage: "folder")
         }
 
         if #available(macOS 26.0, *) {
-            button
-                .buttonStyle(.glass)
-                .padding()
+            button.buttonStyle(.glass)
         } else {
-            button
-                .buttonStyle(.bordered)
-                .padding()
+            button.buttonStyle(.bordered)
         }
     }
 
@@ -48,13 +44,9 @@ struct OpenOrNewDocumentView: View {
         }
 
         if #available(macOS 26.0, *) {
-            button
-                .buttonStyle(.glassProminent)
-                .padding()
+            button.buttonStyle(.glassProminent)
         } else {
-            button
-                .buttonStyle(.borderedProminent)
-                .padding()
+            button.buttonStyle(.borderedProminent)
         }
     }
     

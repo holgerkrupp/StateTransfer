@@ -29,8 +29,13 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     //var request: HTTPRequest
     @Published var requests: [HTTPRequest] = []{
         didSet {
+            attachObservers()
             markDirty()
-            
+        }
+    }
+    @Published var chains: [RequestChain] = [] {
+        didSet {
+            markDirty()
         }
     }
     
@@ -53,6 +58,7 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
         self.isImported = true // Ensure it's treated as an imported file
         
         requests = document.requests
+        chains = document.chains
         hasBeenSaved = document.hasBeenSaved
         isDirty = document.isDirty
         attachObservers()
@@ -98,7 +104,10 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
             // Default to JSON parsing
 
             
-            if let singleRequest = try? JSONDecoder().decode(HTTPRequest.self, from: data) {
+            if let envelope = try? JSONDecoder().decode(HTTPRequestDocumentEnvelope.self, from: data) {
+                requests = envelope.requests
+                chains = envelope.chains
+            } else if let singleRequest = try? JSONDecoder().decode(HTTPRequest.self, from: data) {
                 self.requests = [singleRequest] // Wrap it in an array
             } else {
                 self.requests = try JSONDecoder().decode([HTTPRequest].self, from: data)
@@ -117,10 +126,40 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     
      func addRequest(_ request: HTTPRequest?) {
         let newRequest = request ?? HTTPRequest()
+        if requests.contains(where: { $0.id == newRequest.id }) {
+            newRequest.id = UUID()
+        }
         newRequest.onChange = { [weak self] in
             self?.markDirty()
         }
         requests.append(newRequest)
+    }
+
+    func addChain(name: String = "New Chain") -> RequestChain {
+        let chain = RequestChain(name: name)
+        chains.append(chain)
+        return chain
+    }
+
+    func removeRequest(_ requestID: UUID) {
+        requests.removeAll { $0.id == requestID }
+        chains = chains.map { chain in
+            var updated = chain
+            let removedNodeIDs = Set(
+                updated.nodes
+                    .filter { $0.requestID == requestID }
+                    .map(\.id)
+            )
+            updated.nodes.removeAll { removedNodeIDs.contains($0.id) }
+            updated.links.removeAll {
+                removedNodeIDs.contains($0.sourceNodeID)
+                    || removedNodeIDs.contains($0.destinationNodeID)
+            }
+            if updated.startNodeID.map(removedNodeIDs.contains) == true {
+                updated.startNodeID = updated.nodes.first?.id
+            }
+            return updated
+        }
     }
 
     func saveDocument() {
@@ -140,7 +179,11 @@ class HTTPRequestDocument: FileDocument, ObservableObject {
     }
     
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        let data = try JSONEncoder().encode(requests)
+        let envelope = HTTPRequestDocumentEnvelope(
+            requests: requests,
+            chains: chains
+        )
+        let data = try JSONEncoder().encode(envelope)
         DispatchQueue.main.async { [weak self] in
             self?.hasBeenSaved = true
             self?.isDirty = false

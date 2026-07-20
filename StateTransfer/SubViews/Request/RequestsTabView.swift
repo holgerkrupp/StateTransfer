@@ -35,7 +35,9 @@ struct RequestsTabView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, 10)
+        .background(.bar)
+        .overlay(alignment: .bottom) { Divider() }
         .onAppear {
             if selectedRequestID == nil, !$document.requests.isEmpty {
                 selectedRequestID = $document.requests.first?.id.wrappedValue
@@ -45,7 +47,7 @@ struct RequestsTabView: View {
     
     private func closeRequest(_ request: HTTPRequest) {
         if let index = document.requests.firstIndex(where: { $0.id == request.id }) {
-            document.requests.remove(at: index)
+            document.removeRequest(document.requests[index].id)
             if document.requests.isEmpty {
                 document.addRequest(nil)
                 
@@ -67,9 +69,10 @@ struct RequestsTabView: View {
             document.addRequest(request)
             selectedRequestID = request.id
         } label: {
-            Label("New", systemImage: "plus")
+            Label("New Request", systemImage: "plus")
                 .labelStyle(.iconOnly)
         }
+        .help("Add request")
 
         if #available(macOS 26.0, *) {
             button.buttonStyle(.glass)
@@ -125,10 +128,13 @@ struct TabItemView: View {
                     .opacity(0.7)
             }
             .buttonStyle(.plain)
+            .help("Close \(request.name)")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .frame(minWidth: 100, maxWidth: 200)
+        .contentShape(Capsule())
+        .accessibilityElement(children: .contain)
         .background {
             if isSelected {
                 if #available(macOS 26.0, *) {

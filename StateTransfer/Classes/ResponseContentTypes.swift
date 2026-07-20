@@ -5,6 +5,8 @@
 //  Created by Holger Krupp on 23.02.25.
 //
 
+import Foundation
+
 
 enum ContentType: Equatable {
     case image(ImageContentType)
@@ -12,12 +14,18 @@ enum ContentType: Equatable {
     case unknown(String)
     
     static func from(_ rawValue: String) -> ContentType {
-        if let imageType = ImageContentType.from(rawValue) {
+        let mimeType = rawValue
+            .split(separator: ";", maxSplits: 1)
+            .first?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() ?? ""
+
+        if let imageType = ImageContentType.from(mimeType) {
             return .image(imageType)
-        } else if let textType = TextContentType.from(rawValue) {
+        } else if let textType = TextContentType.from(mimeType) {
             return .text(textType)
         } else {
-            return .unknown(rawValue)
+            return .unknown(mimeType)
         }
     }
 }
@@ -52,6 +60,34 @@ enum TextContentType: String {
     case rtf = "application/rtf"
     
     static func from(_ rawValue: String) -> TextContentType? {
-        return TextContentType(rawValue: rawValue)
+        if let exactType = TextContentType(rawValue: rawValue) {
+            return exactType
+        }
+
+        switch rawValue {
+        case "text/xml", "application/xhtml+xml":
+            return .xml
+        case "text/json":
+            return .json
+        case "text/yaml", "application/yaml":
+            return .yaml
+        case "text/javascript", "application/x-javascript":
+            return .javascript
+        case "text/rtf":
+            return .rtf
+        case "application/x-www-form-urlencoded", "application/graphql", "application/sql":
+            return .plain
+        default:
+            if rawValue.hasSuffix("+json") {
+                return .json
+            }
+            if rawValue.hasSuffix("+xml") {
+                return .xml
+            }
+            if rawValue.hasPrefix("text/") {
+                return .plain
+            }
+            return nil
+        }
     }
 }
